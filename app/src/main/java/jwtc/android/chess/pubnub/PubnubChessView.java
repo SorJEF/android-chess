@@ -261,6 +261,7 @@ public class PubnubChessView extends ChessViewBase {
     public boolean paintMove(int from, int to){
         m_iTo = to;
         m_iFrom = from;
+        _jni.requestMove(from, to);
         paint();
         m_iFrom = -1;
         m_iTo = -1;
