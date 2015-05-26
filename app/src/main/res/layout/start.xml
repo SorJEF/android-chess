@@ -77,7 +77,13 @@
 			    <View android:layout_width="0dip" android:layout_height="10dip" android:layout_weight="1"
 			        android:layout_margin="10dip" android:padding="10dip"/>
 			        -->
-		    </TableRow> 
+		    </TableRow>
+			<TableRow>
+				<Button android:id="@+id/StartButtonPubnub" android:text="@string/start_pubnub"
+					android:layout_margin="10dip" android:padding="10dip"
+					android:layout_width="0dip" android:layout_height="wrap_content" android:layout_weight="1"
+					/>
+			</TableRow>
 		</TableLayout>
 	</ScrollView>
 	<!-- 
