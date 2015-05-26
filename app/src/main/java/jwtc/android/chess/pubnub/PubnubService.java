@@ -67,7 +67,8 @@ public class PubnubService extends Service {
         return mBinder;
     }
 
-    void publishToPubnubChannel(final String message){
+    void publishToPubnubChannel(final String message) {
+        Log.d(LOG_TAG, "Publish to Pubnub: " + message);
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -75,11 +76,12 @@ public class PubnubService extends Service {
                     public void successCallback(String channel, Object response) {
                         Log.d(LOG_TAG, response.toString());
                     }
+
                     public void errorCallback(String channel, PubnubError error) {
                         Log.d(LOG_TAG, error.toString());
                     }
                 };
-                pubnub.publish(CHANNEL, message , callback);
+                pubnub.publish(CHANNEL, message, callback);
             }
         }).start();
     }
@@ -95,7 +97,7 @@ public class PubnubService extends Service {
                         public void successCallback(String channel, Object message) {
                             super.successCallback(channel, message);
                             Log.d(LOG_TAG, "Success callback to Pubnub channel." + message.toString());
-                            if(PubnubChessActivity.isActive){
+                            if (PubnubChessActivity.isActive) {
                                 Intent intent = new Intent().putExtra(PubnubChessActivity.PARAM_RESULT, message.toString());
                                 try {
                                     pendingIntent.send(PubnubService.this, PubnubChessActivity.STATUS_FINISH, intent);
@@ -105,6 +107,7 @@ public class PubnubService extends Service {
                             } else {
                                 Intent myIntent = new Intent(PubnubService.this, PubnubChessActivity.class);
                                 myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                myIntent.putExtra("game_create", message.toString());
                                 startActivity(myIntent);
                             }
                         }
@@ -181,6 +184,7 @@ public class PubnubService extends Service {
                             Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
                         }
                     }
+
                     public void errorCallback(String channel, PubnubError error) {
                         Log.d("PUBNUB", "HERE_NOW_ERROR" + error.toString());
                     }
@@ -195,30 +199,30 @@ public class PubnubService extends Service {
         }).start();
     }
 
-    String getUUID(){
+    String getUUID() {
         return pubnub.getUUID();
     }
 
-    private ArrayList<PubnubUser> parseJsonHereNowResponse(Object response){
+    private ArrayList<PubnubUser> parseJsonHereNowResponse(Object response) {
         ArrayList<PubnubUser> users = null;
         try {
             JSONObject jsonObject = new JSONObject(response.toString());
             JSONArray jsonArray = jsonObject.getJSONArray("uuids");
             users = new ArrayList<PubnubUser>();
-            for (int i=0; i< jsonArray.length(); i++){
+            for (int i = 0; i < jsonArray.length(); i++) {
                 PubnubUser user = new PubnubUser();
                 String status;
                 String name;
                 JSONObject jsonUser;
-                try{
+                try {
                     jsonUser = jsonArray.getJSONObject(i);
                     name = jsonUser.getString("uuid");
-                }catch (JSONException e){
+                } catch (JSONException e) {
                     continue;
                 }
-                try{
+                try {
                     status = jsonUser.getJSONObject("state").getString("status");
-                }catch (JSONException e){
+                } catch (JSONException e) {
                     status = "playing";
                 }
                 user.setName(name);

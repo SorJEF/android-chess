@@ -30,13 +30,14 @@ public class PubnubChessView extends ChessViewBase {
     public JNI getJni(){
         return _jni;
     }
-    //private Button _butAction;
     private TextView _tvPlayerTop, _tvPlayerBottom, _tvClockTop, _tvClockBottom, _tvBoardNum, _tvLastMove;
 
-    //private EditText _editChat;
     private Button _butConfirmMove, _butCancelMove;
     private ViewSwitcher _viewSwitchConfirm;
-    private String _opponent, _whitePlayer, _blackPlayer;
+    private String _opponent;
+    private String _whitePlayer;
+    private String _blackPlayer;
+    private String _me;
     private int m_iFrom, _iWhiteRemaining, _iBlackRemaining, _iGameNum, _iTurn, m_iTo;
     private PubnubChessActivity _parent;
     private boolean  _bHandleClick, _bOngoingGame, _bForceFlipBoard, _bConfirmMove;
@@ -44,8 +45,6 @@ public class PubnubChessView extends ChessViewBase {
     private static final int MSG_TOP_TIME = 1, MSG_BOTTOM_TIME = 2;
     public static final int VIEW_NONE = 0, VIEW_PLAY = 1, VIEW_WATCH = 2, VIEW_EXAMINE = 3, VIEW_PUZZLE = 4, VIEW_ENDGAME = 5;
     protected int _viewMode;
-
-//	private Vibrator _vibrator;
 
     protected Handler m_timerHandler = new Handler(){
         /** Gets called on every message that is received */
@@ -90,7 +89,7 @@ public class PubnubChessView extends ChessViewBase {
         //_tvViewMode = (TextView)_activity.findViewById(R.id.TextViewICSBoardViewMode);
         _tvLastMove = (TextView)_activity.findViewById(R.id.TextViewICSBoardLastMove);
 
-        _butCancelMove = (Button)_activity.findViewById(R.id.ButtonPubnubConfirmMove);
+        _butCancelMove = (Button)_activity.findViewById(R.id.ButtonPubnubCancelMove);
         _butCancelMove.setOnClickListener(new View.OnClickListener(){
             public void onClick(View arg0) {
                 m_iFrom = -1;
@@ -108,7 +107,7 @@ public class PubnubChessView extends ChessViewBase {
 
                 _tvLastMove.setText("...");
                 String sMove = Pos.toString(m_iFrom) + "-" + Pos.toString(m_iTo);
-                _parent.sendString(sMove);
+                _parent.sendString("{ game : 'continue', user : '" + _me + "', move : '" + sMove + "'}");
                 m_iFrom = -1;
                 // switch back
                 _viewSwitchConfirm.setDisplayedChild(0);
@@ -158,7 +157,6 @@ public class PubnubChessView extends ChessViewBase {
     }
 
     public void init(){
-
         Log.i("init", "=========");
 
         m_iFrom = -1;
@@ -192,271 +190,53 @@ public class PubnubChessView extends ChessViewBase {
     public boolean isUserPlaying(){
         return _viewMode == VIEW_PLAY;
     }
-    public String getOpponent(){
-        return _opponent;
-    }
-    public int getGameNum(){
-        return _iGameNum;
-    }
-    public void setGameNum(int num){
-        Log.i("setGameNum", "num = " + num);
-        _iGameNum = num;
-    }
+
     public void setConfirmMove(boolean b){
         _bConfirmMove = b;
     }
-    public void stopGame(){
-        Log.i("stopGame", "=========");
-        _bOngoingGame = false;
-        _viewMode = VIEW_NONE;
-        _flippedBoard = false;
-        _iGameNum = 0;
-        m_iTo = 0;
-        m_iFrom = -1;
 
-        _jni.reset();
-
-        //resetImageCache();
-        //paint();
-    }
-
-    public void forceFlipBoard(){
-        _bForceFlipBoard = _bForceFlipBoard ? false : true;
-        _flippedBoard = _bForceFlipBoard;
-        paint();
-    }
-
-    public synchronized boolean preParseGame(final String fLine){
-        try{
-            // 64 fields + 8 spaces = 72
-            if(fLine.length() > 72){
-                String line = fLine.substring(72);
-
-                //_flippedBoard = false;
-                //B 0 0 1 1 0 7 Newton Einstein 1 2 12 39 39 119 122 2 K/e1-e2 (0:06) Ke2 0
-                StringTokenizer st = new StringTokenizer(line);
-
-                st.nextToken(); // W or B
-                st.nextToken();st.nextToken();st.nextToken();
-                st.nextToken();st.nextToken();st.nextToken();
-
-                // skip the check for gamenum?
-                int iTmp = Integer.parseInt(st.nextToken());
-
-                if(_iGameNum == iTmp){
-
-                    return true;
-                }
-
-                Log.i("preParseGame", "Gamenum " + _iGameNum + " <> " + iTmp);
-
-            } // > 64
-
-        } catch(Exception ex){
-            Log.e("preParseGame", ex.toString());
-        }
-        return false;
-    }
-
-    public boolean paintMove(int from, int to){
+    public void paintMove(int from, int to){
         m_iTo = to;
         m_iFrom = from;
         _jni.requestMove(from, to);
+        _bHandleClick = true;
         paint();
         m_iFrom = -1;
         m_iTo = -1;
-        return true;
     }
 
-    public synchronized boolean parseGame(String line, String sMe){
-        try{
-            //<12> rnbqkb-r pppppppp -----n-- -------- ----P--- -------- PPPPKPPP RNBQ-BNR B -1 0 0 1 1 0 7 Newton Einstein 1 2 12 39 39 119 122 2 K/e1-e2 (0:06) Ke2 0
-            //<12> ----k--r -npn-ppp -p---r-- ---Pp--- BPP-P-Pb -----R-- ---BN-P- -R-K---- B -1 0 0 1 0 2 1227 Lingo DoctorYona 0 3 0 25 25 81 80 29 B/c2-a4 (0:02) Ba4 0
-
-            /**
-             * rnbqkb-r
-             * pppppppp
-             * -----n--
-             * --------
-             * ----P---
-             * --------
-             * PPPPKPPP
-             * RNBQ-BNR
-             *
-             */
-            _jni.reset();
-
-            resetImageCache();
-
-            int p = 0, t = 0, index = -1; // !!
-
-            for(int i = 0; i < 64; i++){
-                if(i % 8 == 0)
-                    index++;
-                char c = line.charAt(index++);
-                if(c != '-'){
-                    if(c == 'k' || c == 'K'){
-                        p = BoardConstants.KING;
-                        t = (c == 'k' ? BoardConstants.BLACK : BoardConstants.WHITE);
-                    }
-                    else if(c == 'q' || c == 'Q'){
-                        p = BoardConstants.QUEEN;
-                        t = (c == 'q' ? BoardConstants.BLACK : BoardConstants.WHITE);
-                    }
-                    else if(c == 'r' || c == 'R'){
-                        p = BoardConstants.ROOK;
-                        t = (c == 'r' ? BoardConstants.BLACK : BoardConstants.WHITE);
-                    }
-                    else if(c == 'n' || c == 'N'){
-                        p = BoardConstants.KNIGHT;
-                        t = (c == 'n' ? BoardConstants.BLACK : BoardConstants.WHITE);
-                    }
-                    else if(c == 'b' || c == 'B'){
-                        p = BoardConstants.BISHOP;
-                        t = (c == 'b' ? BoardConstants.BLACK : BoardConstants.WHITE);
-                    }
-                    else if(c == 'p' || c == 'P'){
-                        p = BoardConstants.PAWN;
-                        t = (c == 'p' ? BoardConstants.BLACK : BoardConstants.WHITE);
-                    }
-                    else
-                        continue;
-                    _jni.putPiece(i, p, t);
-                }
-            } // loop 64
-            index++;
-            line = line.substring(index);
-            //_flippedBoard = false;
-            //B 0 0 1 1 0 7 Newton Einstein 1 2 12 39 39 119 122 2 K/e1-e2 (0:06) Ke2 0
-            StringTokenizer st = new StringTokenizer(line);
-            _iTurn = BoardConstants.WHITE;
-            if(st.nextToken().equals("B")){
-                _jni.setTurn(BoardConstants.BLACK);
-                _iTurn = BoardConstants.BLACK;
-            }
-            // -1 none, or 0-7 for column indicates double pawn push
-            int iEPColumn = Integer.parseInt(st.nextToken());
-            int wccs = Integer.parseInt(st.nextToken());
-            int wccl = Integer.parseInt(st.nextToken());
-            int bccs = Integer.parseInt(st.nextToken());
-            int bccl = Integer.parseInt(st.nextToken());
-            int r50 = Integer.parseInt(	st.nextToken());
-            int ep = -1;
-            if(iEPColumn >= 0){
-                // calc from previous turn!
-                if(_iTurn == BoardConstants.WHITE){
-                    ep = iEPColumn + 16;
-                } else {
-                    ep = iEPColumn + 40;
-                }
-                Log.i("parseGame", "EP: " + ep);
-            }
-
-            // skip the check for gamenum?
-            int iTmp = Integer.parseInt(st.nextToken());
-            _iGameNum = iTmp;
-            _tvBoardNum.setText("" + _iGameNum);
-    		/*
-    		if(_iGameNum != iTmp){
-    			Log.i("parseGame", "Gamenum " + _iGameNum + " <> " + iTmp);
-    			return false;
-    		}
-    		*/
-            _whitePlayer = st.nextToken();
-            _blackPlayer = st.nextToken();
-
-            if(_blackPlayer.equalsIgnoreCase(sMe)){
-                _flippedBoard = true;
-            } else if(_whitePlayer.equalsIgnoreCase(sMe)){
-                _flippedBoard = false;
-            } else {
-                _flippedBoard = _bForceFlipBoard;
-            }
-
-            int iMe = Integer.parseInt(st.nextToken());
-            //_bHandleClick = (iMe == 1);
-            _bHandleClick = true;
-            //Log.i("parseGame", "setting handleclick " + iMe + ":" + _whitePlayer + ":" + _blackPlayer);
-
-            //_bInTheGame = iMe == 1 || iMe == -1;
-            if(_viewMode == VIEW_PLAY){
-                _opponent = _blackPlayer.equals(sMe) ? _whitePlayer : _blackPlayer;
-            }
-            _bOngoingGame = true;
-
-            int iTime = Integer.parseInt(st.nextToken());
-            int iIncrement = Integer.parseInt(st.nextToken());
-            st.nextToken();st.nextToken();
-            _iWhiteRemaining = Integer.parseInt(st.nextToken());
-            _iBlackRemaining = Integer.parseInt(st.nextToken());
-
-            if(_flippedBoard){
-                _tvPlayerTop.setText(_whitePlayer);
-                _tvPlayerBottom.setText(_blackPlayer);
-                _tvClockTop.setText(parseTime(_iWhiteRemaining));
-                _tvClockBottom.setText(parseTime(_iBlackRemaining));
-            } else {
-                _tvPlayerTop.setText(_blackPlayer);
-                _tvPlayerBottom.setText(_whitePlayer);
-                _tvClockTop.setText(parseTime(_iBlackRemaining));
-                _tvClockBottom.setText(parseTime(_iWhiteRemaining));
-            }
-
-            // the last move
-            st.nextToken();
-            String sMove = st.nextToken();
-
-            //int iFrom = -1;
-            if(false == sMove.equals("none") && sMove.length() > 2){
-
-                _tvLastMove.setText(sMove);
-
-                if(sMove.equals("o-o")){
-                    if(_iTurn == BoardConstants.WHITE)
-                        m_iTo = Pos.fromString("g8");
-                    else
-                        m_iTo = Pos.fromString("g1");
-                } else if(sMove.equals("o-o-o")){
-                    if(_iTurn == BoardConstants.WHITE)
-                        m_iTo = Pos.fromString("c8");
-                    else
-                        m_iTo = Pos.fromString("c1");
-                } else {
-                    // gxh8=R
-                    try{
-                        //K/e1-e2
-                        m_iTo = Pos.fromString(sMove.substring(sMove.length() - 2));
-                        //iFrom = Pos.fromString(sMove.substring(sMove.length()-5, 2));
-                    } catch(Exception ex2){
-                        m_iTo = -1;
-                        Log.i("parseGame", "Could not parse move: " + sMove + " in " + sMove.substring(sMove.length()-2));
-                    }
-                }
-            }
-            else {
-                _tvLastMove.setText("");
-            }
-
-            //
-            _jni.setCastlingsEPAnd50(wccl, wccs, bccl, bccs, ep, r50);
-
-            _jni.commitBoard();
-
-            // _board
-            paint();
-
-            //Log.i("parseGame", "Done..." + _bHandleClick);
-            return true;
-
-        } catch(Exception ex){
-            Log.e("parseGame", ex.toString());
-            return false;
+    public void startGame(boolean iStart){
+        _jni.newGame();
+        _iWhiteRemaining = 600;
+        _iBlackRemaining = 600;
+        if(iStart){
+            _flippedBoard = false;
+            _whitePlayer = _me;
+            _blackPlayer = _opponent;
+        }else{
+            _flippedBoard = true;
+            _whitePlayer = _opponent;
+            _blackPlayer = _me;
         }
 
+        if(_flippedBoard){
+            _tvPlayerTop.setText(_me);
+            _tvPlayerBottom.setText(_opponent);
+            _tvClockTop.setText(parseTime(_iWhiteRemaining));
+            _tvClockBottom.setText(parseTime(_iBlackRemaining));
+        } else {
+            _tvPlayerTop.setText(_me);
+            _tvPlayerBottom.setText(_opponent);
+            _tvClockTop.setText(parseTime(_iBlackRemaining));
+            _tvClockBottom.setText(parseTime(_iWhiteRemaining));
+        }
+        _bHandleClick = true;
+        setConfirmMove(true);
+        setViewMode(PubnubChessView.VIEW_PLAY);
+        paint();
     }
 
     private String parseTime(int sec){
-
         return String.format("%d:%02d", (int)(Math.floor(sec/60)), sec % 60);
     }
 
@@ -627,7 +407,7 @@ public class PubnubChessView extends ChessViewBase {
                 paint();
 
             } else {
-                _tvLastMove.setText("...");
+                //_tvLastMove.setText("...");
                 // test and make move if valid move
                 //
                 String sMove = "";
@@ -638,6 +418,7 @@ public class PubnubChessView extends ChessViewBase {
                 } else {
                     sMove = Pos.toString(m_iFrom) + "-" + Pos.toString(index);
                 }
+                //_jni.requestMove(m_iFrom, index);
                 _parent.sendString("{ game : 'continue', move : '" + sMove + "'}");
                 m_iTo = index;
                 paint();
@@ -648,5 +429,13 @@ public class PubnubChessView extends ChessViewBase {
             // show that move is invalid
             _tvLastMove.setText("invalid");
         }
+    }
+
+    public void setMe(String _me) {
+        this._me = _me;
+    }
+
+    public void setOpponent(String _opponent) {
+        this._opponent = _opponent;
     }
 }

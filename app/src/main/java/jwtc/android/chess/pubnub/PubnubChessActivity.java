@@ -12,10 +12,8 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.AdapterView;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
 
@@ -26,8 +24,8 @@ import jwtc.android.chess.MyBaseActivity;
 import jwtc.android.chess.R;
 import jwtc.chess.Pos;
 
-public class PubnubChessActivity extends MyBaseActivity implements AdapterView.OnItemClickListener {
-    
+public class PubnubChessActivity extends MyBaseActivity {
+
     private PowerManager.WakeLock _wakeLock;
     private PubnubChessView _view;
     private PubnubConfimDialog _dlgConfirm;
@@ -45,7 +43,7 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
     static boolean isActive = false;
     static boolean isGameCreateRequestSend = false;
 
-    private String opponnentName = null;
+    private String opponentName = null;
     private String myName = null;
 
     protected static final int VIEW_MAIN_BOARD = 0;
@@ -59,11 +57,11 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
         intent = new Intent(this, PubnubService.class);
 
         SharedPreferences prefs = getSharedPreferences("ChessPlayer", MODE_PRIVATE);
-        if(prefs.getBoolean("fullScreen", true)){
+        if (prefs.getBoolean("fullScreen", true)) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        if(getResources().getBoolean(R.bool.portraitOnly)){
+        if (getResources().getBoolean(R.bool.portraitOnly)) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
         setContentView(R.layout.pubnub_chess);
@@ -77,9 +75,9 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
 
         _dlgConfirm = new PubnubConfimDialog(this);
 
-        _tvHeader = (TextView)findViewById(R.id.TextViewHeader);
+        _tvHeader = (TextView) findViewById(R.id.TextViewHeader);
 
-        _viewAnimatorMain = (ViewAnimator)findViewById(R.id.ViewAnimatorMain);
+        _viewAnimatorMain = (ViewAnimator) findViewById(R.id.ViewAnimatorMain);
         _viewAnimatorMain.setOutAnimation(this, R.anim.slide_left);
         _viewAnimatorMain.setInAnimation(this, R.anim.slide_right);
 
@@ -91,6 +89,7 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
     @Override
     protected void onStart() {
         super.onStart();
+        _view.setConfirmMove(true);
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         isActive = true;
     }
@@ -98,7 +97,7 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
     @Override
     protected void onStop() {
         super.onStop();
-        if(!bound) return;
+        if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
         //isActive = false;
@@ -108,7 +107,7 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
     @Override
     protected void onPause() {
         super.onStop();
-        if(!bound) return;
+        if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
         //isActive = false;
@@ -133,11 +132,13 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
             PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
             Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
             startService(intent);
-            opponnentName = getIntent().getStringExtra("uuid");
             myName = pubnubService.getUUID();
-            if(!isGameCreateRequestSend){
-                pubnubService.publishToPubnubChannel("{ game : 'create', initiator : '" + myName + "'}");
-                isGameCreateRequestSend = true;
+            String gameCreate = getIntent().getStringExtra("game_create");
+            if (!TextUtils.isEmpty(gameCreate)) {
+                parsePubnubJson(gameCreate);
+            } else {
+                gameCreate = "{ game : 'create', acceptor: '',  initiator : '" + myName + "'}";
+                pubnubService.publishToPubnubChannel(gameCreate);
             }
         }
 
@@ -149,82 +150,59 @@ public class PubnubChessActivity extends MyBaseActivity implements AdapterView.O
     };
 
     private void parsePubnubJson(String line) {
-
-        /**
-         *  My snippet
-         */
         Log.d(LOG_TAG, "Parse message from pubnub channel: " + line);
-        //String myLine = "{ 'game' : 'create', 'game_number' : 112, 'user' : 'rbublik' }";
-        //String myLine2 = "{ 'game' : 'continue', 'user' : 'rbublik', 'move' : 'B 0 0 1 1 0 7 Newton Einstein 1 2 12 39 39 119 122 2 K/e1-e2 (0:06) Ke2 0' }";
         String game = null;
         JSONObject jsonObject = null;
         try {
             jsonObject = new JSONObject(line);
             game = jsonObject.getString("game");
+            if (null != game && game.equalsIgnoreCase("continue")) {
+                String move = null;
+                String sender = jsonObject.getString("user");
+                if(sender.equalsIgnoreCase(opponentName)){
+                    move = jsonObject.getString("move");
+                    String[] moveArray = move.split("-");
+                    Log.d(LOG_TAG, "Paint move: " + move);
+                    int from = Pos.fromString(moveArray[0]);
+                    int to = Pos.fromString(moveArray[1]);
+                    get_view().paintMove(from, to);
+                    //switchToBoardView();
+                }else{
+                    Log.d(LOG_TAG, "Hey, that's my move. Just ignore it.");
+                }
+            }else if (null != game && game.equalsIgnoreCase("create")) {
+                String initiator = jsonObject.getString("initiator");
+                String acceptor = jsonObject.getString("acceptor");
+                get_view().setMe(myName);
+                if(!TextUtils.isEmpty(acceptor) && !acceptor.equalsIgnoreCase(myName)){
+                    opponentName = acceptor;
+                    get_view().setOpponent(opponentName);
+                    get_view().startGame(true);
+                }else if(!TextUtils.isEmpty(initiator) && !initiator.equalsIgnoreCase(myName)){
+                    opponentName = initiator;
+                    get_view().setOpponent(opponentName);
+                    get_view().startGame(false);
+                    pubnubService.publishToPubnubChannel( "{ game : 'create', initiator: '" + opponentName + "', acceptor : '" + myName + "'}");
+                }
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        if (null != game && game.equalsIgnoreCase("create")) {
-            try {
-                String initiator = jsonObject.getString("initiator");
-                String startLine = null;
-                if(initiator.equalsIgnoreCase(myName)){
-                    startLine = "rnbqkbnr pppppppp -------- -------- -------- -------- PPPPPPPP RNBQKBNR W -1 0 0 1 1 0 28 " + myName + " " + opponnentName + " 1 20 12 39 39 1200 1200 1 none    (0:00) none 0 0";
-                }else{
-                    startLine = "rnbqkbnr pppppppp -------- -------- -------- -------- PPPPPPPP RNBQKBNR B 1 0 0 1 1 0 28 " + opponnentName + " " + myName + " 1 20 12 39 39 1200 1200 1 none    (0:00) none 0 0";
-                }
-                if (get_view().parseGame(startLine, myName)) {
-                    switchToBoardView();
-                } else {
-                    Log.w("parseBuffer", "Could not parse game response");
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        } else if (null != game && game.equalsIgnoreCase("continue")) {
-            String move = null;
-            try {
-                move = jsonObject.getString("move");
-                String[] moveArray = move.split("-");
-                int from = Pos.fromString(moveArray[0]);
-                int to = Pos.fromString(moveArray[1]);
-                if(get_view().paintMove(from, to)){
-                    switchToBoardView();
-                } else {
-                    Log.w("parseBuffer", "Could not parse game response");
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
-    public void switchToBoardView(){
-        if(_viewAnimatorMain.getDisplayedChild() != VIEW_MAIN_BOARD)
+    public void switchToBoardView() {
+        if (_viewAnimatorMain.getDisplayedChild() != VIEW_MAIN_BOARD)
             _viewAnimatorMain.setDisplayedChild(VIEW_MAIN_BOARD);
-
-        startSession();
     }
 
-    public void startSession(){
-
-    }
-
-    public void sendString(String s){
-        if(null != s && !TextUtils.isEmpty(s)){
+    public void sendString(String s) {
+        if (!TextUtils.isEmpty(s)) {
             pubnubService.publishToPubnubChannel(s);
         }
-    }
-
-
-
-    @Override
-    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-        
     }
 
     public PubnubChessView get_view() {
         return _view;
     }
-    
+
 }
