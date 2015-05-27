@@ -26,6 +26,7 @@ import jwtc.chess.board.BoardMembers;
 
 public class PubnubChessView extends ChessViewBase {
     private JNI _jni;
+    private static final String LOG_TAG = "PUBNUB";
 
     public JNI getJni(){
         return _jni;
@@ -198,6 +199,7 @@ public class PubnubChessView extends ChessViewBase {
     public void paintMove(int from, int to){
         m_iTo = to;
         m_iFrom = from;
+        resetImageCache();
         _jni.requestMove(from, to);
         _bHandleClick = true;
         paint();
@@ -218,15 +220,14 @@ public class PubnubChessView extends ChessViewBase {
             _whitePlayer = _opponent;
             _blackPlayer = _me;
         }
-
         if(_flippedBoard){
-            _tvPlayerTop.setText(_me);
-            _tvPlayerBottom.setText(_opponent);
+            _tvPlayerTop.setText(_whitePlayer);
+            _tvPlayerBottom.setText(_blackPlayer);
             _tvClockTop.setText(parseTime(_iWhiteRemaining));
             _tvClockBottom.setText(parseTime(_iBlackRemaining));
         } else {
-            _tvPlayerTop.setText(_me);
-            _tvPlayerBottom.setText(_opponent);
+            _tvPlayerTop.setText(_blackPlayer);
+            _tvPlayerBottom.setText(_whitePlayer);
             _tvClockTop.setText(parseTime(_iBlackRemaining));
             _tvClockBottom.setText(parseTime(_iWhiteRemaining));
         }
@@ -348,7 +349,7 @@ public class PubnubChessView extends ChessViewBase {
                                         dialog.dismiss();
 
                                         int move, size = _jni.getMoveArraySize();
-                                        for(int i = 0; i < size; i++){
+                                        for(int i = 0; i < size ; i++){
                                             move = _jni.getMoveArrayAt(i);
                                             if(Move.getFrom(move) == m_iFrom){
                                                 if(Move.getTo(move) == finalIndex && (Move.isOO(move) || Move.isOOO(move))){
