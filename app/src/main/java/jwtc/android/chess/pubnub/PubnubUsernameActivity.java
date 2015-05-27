@@ -46,15 +46,15 @@ public class PubnubUsernameActivity extends Activity {
         intent = new Intent(this, PubnubService.class);
     }
 
-    public void onNextBtnClick(View view){
+    public void onNextBtnClick(View view) {
         String username = usernameField.getText().toString();
-        if(TextUtils.isEmpty(username)){
+        if (TextUtils.isEmpty(username)) {
             Toast.makeText(getApplicationContext(), "Enter your username, please.", Toast.LENGTH_SHORT).show();
-        }else{
-            if(!bound) return;
+        } else {
+            if (!bound) return;
             startService(intent);
             JSONObject state = getJsonStateObject();
-            if(null == state) return;
+            if (null == state) return;
             pubnubService.setPubnubState(username, state);
             startUserListActivity(username);
         }
@@ -63,14 +63,14 @@ public class PubnubUsernameActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-        if(bound) return;
+        if (bound) return;
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if(!bound) return;
+        if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
     }
@@ -78,7 +78,7 @@ public class PubnubUsernameActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        if(!bound) return;
+        if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
     }
@@ -106,7 +106,7 @@ public class PubnubUsernameActivity extends Activity {
         startActivity(intent);
     }
 
-    private JSONObject getJsonStateObject(){
+    private JSONObject getJsonStateObject() {
         JSONObject state = new JSONObject();
         try {
             state.put("status", "waiting");

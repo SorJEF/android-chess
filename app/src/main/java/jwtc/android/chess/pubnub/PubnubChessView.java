@@ -12,6 +12,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.ViewSwitcher;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -36,11 +40,12 @@ public class PubnubChessView extends ChessViewBase {
     private JNI _jni;
     private static final String LOG_TAG = "PUBNUB";
     private List<PGNEntry> _arrPGN;
-    private HashMap<String,String> _mapPGNHead;
+    private HashMap<String, String> _mapPGNHead;
 
-    public JNI getJni(){
+    public JNI getJni() {
         return _jni;
     }
+
     private TextView _tvPlayerTop, _tvPlayerBottom, _tvClockTop, _tvClockBottom, _tvBoardNum, _tvLastMove;
 
     private Button _butConfirmMove, _butCancelMove;
@@ -51,20 +56,19 @@ public class PubnubChessView extends ChessViewBase {
     private String _me;
     private int m_iFrom, _iWhiteRemaining, _iBlackRemaining, _iGameNum, _iTurn, m_iTo;
     private PubnubChessActivity _parent;
-    private boolean  _bHandleClick, _bOngoingGame, _bForceFlipBoard, _bConfirmMove;
+    private boolean _bHandleClick, _bOngoingGame, _bForceFlipBoard, _bConfirmMove;
     private Timer _timer;
     private static final int MSG_TOP_TIME = 1, MSG_BOTTOM_TIME = 2;
     public static final int VIEW_NONE = 0, VIEW_PLAY = 1, VIEW_WATCH = 2, VIEW_EXAMINE = 3, VIEW_PUZZLE = 4, VIEW_ENDGAME = 5;
     protected int _viewMode;
 
-    protected Handler m_timerHandler = new Handler(){
+    protected Handler m_timerHandler = new Handler() {
         /** Gets called on every message that is received */
         // @Override
         public void handleMessage(Message msg) {
-            if(msg.what == MSG_TOP_TIME){
+            if (msg.what == MSG_TOP_TIME) {
                 _tvClockTop.setText(parseTime(msg.getData().getInt("ticks")));
-            }
-            else {
+            } else {
                 _tvClockBottom.setText(parseTime(msg.getData().getInt("ticks")));
             }
         }
@@ -76,7 +80,7 @@ public class PubnubChessView extends ChessViewBase {
         _jni = new JNI();
         _jni.reset();
 
-        _parent = (PubnubChessActivity)activity;
+        _parent = (PubnubChessActivity) activity;
         _arrPGN = new ArrayList<PGNEntry>();
         _mapPGNHead = new HashMap<String, String>();
 
@@ -92,18 +96,18 @@ public class PubnubChessView extends ChessViewBase {
         _iWhiteRemaining = _iBlackRemaining = 0;
         _bConfirmMove = false;
 
-        _tvPlayerTop = (TextView)_activity.findViewById(R.id.TextViewTop);
-        _tvPlayerBottom = (TextView)_activity.findViewById(R.id.TextViewBottom);
+        _tvPlayerTop = (TextView) _activity.findViewById(R.id.TextViewTop);
+        _tvPlayerBottom = (TextView) _activity.findViewById(R.id.TextViewBottom);
 
-        _tvClockTop = (TextView)_activity.findViewById(R.id.TextViewClockTop);
-        _tvClockBottom = (TextView)_activity.findViewById(R.id.TextViewClockBottom);
+        _tvClockTop = (TextView) _activity.findViewById(R.id.TextViewClockTop);
+        _tvClockBottom = (TextView) _activity.findViewById(R.id.TextViewClockBottom);
 
-        _tvBoardNum = (TextView)_activity.findViewById(R.id.TextViewICSBoardNum);
+        _tvBoardNum = (TextView) _activity.findViewById(R.id.TextViewICSBoardNum);
         //_tvViewMode = (TextView)_activity.findViewById(R.id.TextViewICSBoardViewMode);
-        _tvLastMove = (TextView)_activity.findViewById(R.id.TextViewICSBoardLastMove);
+        _tvLastMove = (TextView) _activity.findViewById(R.id.TextViewICSBoardLastMove);
 
-        _butCancelMove = (Button)_activity.findViewById(R.id.ButtonPubnubCancelMove);
-        _butCancelMove.setOnClickListener(new View.OnClickListener(){
+        _butCancelMove = (Button) _activity.findViewById(R.id.ButtonPubnubCancelMove);
+        _butCancelMove.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0) {
                 m_iFrom = -1;
                 m_iTo = -1;
@@ -114,8 +118,8 @@ public class PubnubChessView extends ChessViewBase {
                 _viewSwitchConfirm.setDisplayedChild(0);
             }
         });
-        _butConfirmMove = (Button)_activity.findViewById(R.id.ButtonPubnubConfirmMove);
-        _butConfirmMove.setOnClickListener(new View.OnClickListener(){
+        _butConfirmMove = (Button) _activity.findViewById(R.id.ButtonPubnubConfirmMove);
+        _butConfirmMove.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0) {
 
                 _tvLastMove.setText("...");
@@ -127,16 +131,17 @@ public class PubnubChessView extends ChessViewBase {
             }
         });
 
-        _viewSwitchConfirm = (ViewSwitcher)_activity.findViewById(R.id.ViewSitcherConfirmAndText);
+        _viewSwitchConfirm = (ViewSwitcher) _activity.findViewById(R.id.ViewSitcherConfirmAndText);
 
         _timer = new Timer(true);
-        _timer.schedule(new TimerTask(){
-            @Override public void run() {
+        _timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
                 int ticks = 0;
 
-                if(false == _bOngoingGame)
+                if (false == _bOngoingGame)
                     return;
-                if(_iTurn == BoardConstants.WHITE){
+                if (_iTurn == BoardConstants.WHITE) {
                     _iWhiteRemaining--;
                     ticks = _iWhiteRemaining;
                 } else {
@@ -144,10 +149,10 @@ public class PubnubChessView extends ChessViewBase {
                     ticks = _iBlackRemaining;
                 }
 
-                if(ticks >= 0){
+                if (ticks >= 0) {
                     Message msg = new Message();
 
-                    if(_flippedBoard){
+                    if (_flippedBoard) {
                         msg.what = _iTurn == BoardConstants.WHITE ? MSG_TOP_TIME : MSG_BOTTOM_TIME;
                     } else {
                         msg.what = _iTurn == BoardConstants.WHITE ? MSG_BOTTOM_TIME : MSG_TOP_TIME;
@@ -158,7 +163,8 @@ public class PubnubChessView extends ChessViewBase {
                     msg.setData(bun);
                     m_timerHandler.sendMessage(msg);
                 }
-            }}, 1000, 1000);
+            }
+        }, 1000, 1000);
 
         View.OnClickListener ocl = new View.OnClickListener() {
             public void onClick(View arg0) {
@@ -169,7 +175,7 @@ public class PubnubChessView extends ChessViewBase {
         init(ocl);
     }
 
-    public void init(){
+    public void init() {
         Log.i("init", "=========");
 
         m_iFrom = -1;
@@ -183,38 +189,51 @@ public class PubnubChessView extends ChessViewBase {
         paint();
     }
 
-    public void setViewMode(final int iMode){
+    public void setViewMode(final int iMode) {
         _viewMode = iMode;
         updateViewMode();
     }
 
-    public void updateViewMode(){
-        switch(_viewMode){
-            case VIEW_NONE: Log.i("ICSChessView", "Idle"); break;
-            case VIEW_PLAY: Log.i("ICSChessView", "Play"); break;
-            case VIEW_WATCH: Log.i("ICSChessView", "Watch"); break;
-            case VIEW_EXAMINE: Log.i("ICSChessView", "Examine"); break;
-            case VIEW_PUZZLE: Log.i("ICSChessView", "Puzzle"); break;
-            case VIEW_ENDGAME: Log.i("ICSChessView", "Endgame"); break;
-            default: Log.i("ICSChessView", "X");
+    public void updateViewMode() {
+        switch (_viewMode) {
+            case VIEW_NONE:
+                Log.i("ICSChessView", "Idle");
+                break;
+            case VIEW_PLAY:
+                Log.i("ICSChessView", "Play");
+                break;
+            case VIEW_WATCH:
+                Log.i("ICSChessView", "Watch");
+                break;
+            case VIEW_EXAMINE:
+                Log.i("ICSChessView", "Examine");
+                break;
+            case VIEW_PUZZLE:
+                Log.i("ICSChessView", "Puzzle");
+                break;
+            case VIEW_ENDGAME:
+                Log.i("ICSChessView", "Endgame");
+                break;
+            default:
+                Log.i("ICSChessView", "X");
         }
     }
 
-    public boolean isUserPlaying(){
+    public boolean isUserPlaying() {
         return _viewMode == VIEW_PLAY;
     }
 
-    public void setConfirmMove(boolean b){
+    public void setConfirmMove(boolean b) {
         _bConfirmMove = b;
     }
 
-    private void parseMove(String move){
+    private void parseMove(String move) {
         String[] moveArray = move.split("-");
         m_iFrom = Pos.fromString(moveArray[0]);
         m_iTo = Pos.fromString(moveArray[1]);
     }
 
-    public void paintMove(String move){
+    public void paintMove(String move) {
         Log.d(LOG_TAG, "Paint move: " + move);
         parseMove(move);
         resetImageCache();
@@ -228,17 +247,17 @@ public class PubnubChessView extends ChessViewBase {
         m_iTo = -1;
     }
 
-    private void checkGameState(int state){
-        switch (state){
+    private void checkGameState(int state) {
+        switch (state) {
             case ChessBoard.MATE:
                 _tvPlayerBottom.setText(R.string.state_mate);
                 setPGNHeadProperty("Result", "0-1"); // If this switch execute - that's mean I lose. That's why 0-1, not 1-0.
-                String pgn = exportFullPGN();
-                _parent.sendString("{game: 'end', result: '" + pgn + "'}");
+                String pgnJson = exportFullJsonPGN();
+                _parent.sendString("{game: 'end', winner: '" + _opponent + "', result: " + pgnJson + "}");
                 new AlertDialog.Builder(_parent)
                         .setTitle("Oh, that's mate!")
                         .setMessage("Game PGN:")
-                        .setMessage(pgn)
+                        .setMessage(exportFullPGN())
                         .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
                                 // do nothing
@@ -257,7 +276,7 @@ public class PubnubChessView extends ChessViewBase {
         }
     }
 
-    private void initPGNHead(){
+    private void initPGNHead() {
         _mapPGNHead.clear();
         Date d = Calendar.getInstance().getTime();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy.MM.dd");
@@ -268,24 +287,24 @@ public class PubnubChessView extends ChessViewBase {
         _arrPGN.clear();
     }
 
-    private void setPGNHeadProperty(String sProp, String sValue){
+    private void setPGNHeadProperty(String sProp, String sValue) {
         _mapPGNHead.put(sProp, sValue);
     }
 
-    public void startGame(boolean iStart){
+    public void startGame(boolean iStart) {
         _jni.newGame();
         _iWhiteRemaining = 600;
         _iBlackRemaining = 600;
-        if(iStart){
+        if (iStart) {
             _flippedBoard = false;
             _whitePlayer = _me;
             _blackPlayer = _opponent;
-        }else{
+        } else {
             _flippedBoard = true;
             _whitePlayer = _opponent;
             _blackPlayer = _me;
         }
-        if(_flippedBoard){
+        if (_flippedBoard) {
             _tvPlayerTop.setText(_whitePlayer);
             _tvPlayerBottom.setText(_blackPlayer);
             _tvClockTop.setText(parseTime(_iWhiteRemaining));
@@ -303,75 +322,92 @@ public class PubnubChessView extends ChessViewBase {
         paint();
     }
 
-    private String parseTime(int sec){
-        return String.format("%d:%02d", (int)(Math.floor(sec/60)), sec % 60);
+    private String parseTime(int sec) {
+        return String.format("%d:%02d", (int) (Math.floor(sec / 60)), sec % 60);
     }
 
-    private void paint(){
+    private void paint() {
         paintBoard(_jni, new int[]{m_iFrom, m_iTo}, null);
     }
 
-    public void addPGNEntry(String sMove, String sAnnotation, int move){
+    public void addPGNEntry(String sMove, String sAnnotation, int move) {
         _arrPGN.add(new PGNEntry(sMove, sAnnotation, move));
     }
 
-    private String exportFullPGN(){
+    private String exportFullPGN() {
         String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate",
-                "Variant", "Setup",	"FEN", "PlyCount"};
+                "Variant", "Setup", "FEN", "PlyCount"};
         String s = "", key;
-        for(int i = 0; i < arrHead.length;i++){
+        for (int i = 0; i < arrHead.length; i++) {
             key = arrHead[i];
-            if(_mapPGNHead.containsKey(key))
-                s +=  "[" + key + " \"" + _mapPGNHead.get(key) + "\"]\n";
+            if (_mapPGNHead.containsKey(key))
+                s += "[" + key + " \"" + _mapPGNHead.get(key) + "\"]\n";
         }
         s += exportMovesPGN();
         s += "\n";
         return s;
     }
 
-    private String exportMovesPGN(){
+    private String exportFullJsonPGN() {
+        String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
+        String key;
+        String head = "";
+            for (int i = 0; i < arrHead.length; i++) {
+                key = arrHead[i];
+                if (_mapPGNHead.containsKey(key)){
+                    head += key + ": '" + _mapPGNHead.get(key) + "', ";
+                }
+            }
+            String moves = "";
+            for (int i = 0; i < _arrPGN.size(); i++) {
+                moves += "'" + _arrPGN.get(i)._sMove + "'";
+                if(i + 1 < _arrPGN.size()){
+                    moves += ", ";
+                }
+            }
+            String pgn = "{" + head + "moves: [" + moves + "]}";
+        return pgn;
+    }
+
+    private String exportMovesPGN() {
         return exportMovesPGNFromPly(1);
     }
 
-    private String exportMovesPGNFromPly(int iPly){
+    private String exportMovesPGNFromPly(int iPly) {
         String s = "";
-        if(iPly > 0){
+        if (iPly > 0) {
             iPly--;
         }
-        if(iPly < 0){
+        if (iPly < 0) {
             iPly = 0;
         }
-        for(int i = iPly; i < _arrPGN.size(); i++){
-            if((i-iPly) % 2 == 0)
-                s += ((i-iPly)/2 + 1) + ". ";
+        for (int i = iPly; i < _arrPGN.size(); i++) {
+            if ((i - iPly) % 2 == 0)
+                s += ((i - iPly) / 2 + 1) + ". ";
             s += _arrPGN.get(i)._sMove + " ";
-            if(_arrPGN.get(i)._sAnnotation.length() > 0)
-                s += " {" +_arrPGN.get(i)._sAnnotation + "}\n ";
+            if (_arrPGN.get(i)._sAnnotation.length() > 0)
+                s += " {" + _arrPGN.get(i)._sAnnotation + "}\n ";
         }
         return s;
     }
 
-    public void handleClick(int index){
-        if(_bHandleClick){
+    public void handleClick(int index) {
+        if (_bHandleClick) {
             m_iTo = -1;
-            if(m_iFrom == -1)
-            {
-                if(_jni.pieceAt(_jni.getTurn(), index) == BoardConstants.FIELD)
-                {
+            if (m_iFrom == -1) {
+                if (_jni.pieceAt(_jni.getTurn(), index) == BoardConstants.FIELD) {
                     return;
                 }
                 m_iFrom = index;
                 paint();
-            }
-            else
-            {
+            } else {
                 boolean isCastle = false;
 
-                if(_jni.isAmbiguousCastle(m_iFrom, index) != 0){ // in case of Fischer
+                if (_jni.isAmbiguousCastle(m_iFrom, index) != 0) { // in case of Fischer
 
                     isCastle = true;
 
-                } else if(index == m_iFrom){
+                } else if (index == m_iFrom) {
                     m_iFrom = -1;
                     return;
                 }
@@ -379,30 +415,30 @@ public class PubnubChessView extends ChessViewBase {
                 // collect legal moves if pref is set
                 boolean isValid = false;
                 int move = -1;
-                try{
+                try {
                     // via try catch because of empty or mem error results in exception
 
-                    if(_jni.isEnded() == 0){
-                        synchronized(this) {
+                    if (_jni.isEnded() == 0) {
+                        synchronized (this) {
                             int size = _jni.getMoveArraySize();
                             //Log.i("paintBoard", "# " + size);
 
                             boolean isPromotion = false;
 
-                            for(int i = 0; i < size; i++){
+                            for (int i = 0; i < size; i++) {
                                 move = _jni.getMoveArrayAt(i);
-                                if(Move.getFrom(move) == m_iFrom){
-                                    if(Move.getTo(move) == index){
+                                if (Move.getFrom(move) == m_iFrom) {
+                                    if (Move.getTo(move) == index) {
                                         isValid = true;
 
                                         // check if it is promotion
-                                        if(		_jni.pieceAt(BoardConstants.WHITE, m_iFrom) == BoardConstants.PAWN &&
+                                        if (_jni.pieceAt(BoardConstants.WHITE, m_iFrom) == BoardConstants.PAWN &&
                                                 BoardMembers.ROW_TURN[BoardConstants.WHITE][m_iFrom] == 6 &&
                                                 BoardMembers.ROW_TURN[BoardConstants.WHITE][index] == 7
                                                 ||
                                                 _jni.pieceAt(BoardConstants.BLACK, m_iFrom) == BoardConstants.PAWN &&
                                                         BoardMembers.ROW_TURN[BoardConstants.BLACK][m_iFrom] == 6 &&
-                                                        BoardMembers.ROW_TURN[BoardConstants.BLACK][index] == 7){
+                                                        BoardMembers.ROW_TURN[BoardConstants.BLACK][index] == 7) {
 
                                             isPromotion = true;
 
@@ -413,7 +449,7 @@ public class PubnubChessView extends ChessViewBase {
                                 }
                             }
 
-                            if(isPromotion){
+                            if (isPromotion) {
                                 final String[] items = _parent.getResources().getStringArray(R.array.promotionpieces);
                                 final int finalIndex = index;
 
@@ -426,10 +462,10 @@ public class PubnubChessView extends ChessViewBase {
                                         String[] arrPromos = {"q", "r", "b", "n"};
                                         _parent.sendString("promote " + arrPromos[item]);
                                         int move, size = _jni.getMoveArraySize();
-                                        for(int i = 0; i < size; i++){
+                                        for (int i = 0; i < size; i++) {
                                             move = _jni.getMoveArrayAt(i);
-                                            if(Move.getFrom(move) == m_iFrom){
-                                                if(Move.getTo(move) == finalIndex && Move.getPromotionPiece(move) == (4-item)){
+                                            if (Move.getFrom(move) == m_iFrom) {
+                                                if (Move.getTo(move) == finalIndex && Move.getPromotionPiece(move) == (4 - item)) {
 
                                                     continueMove(finalIndex, true, move);
                                                     return;
@@ -441,10 +477,10 @@ public class PubnubChessView extends ChessViewBase {
                                 AlertDialog alert = builder.create();
                                 alert.show();
 
-                                return ;
+                                return;
                             }
 
-                            if(isCastle){
+                            if (isCastle) {
 
                                 final int finalIndex = index;
 
@@ -455,10 +491,10 @@ public class PubnubChessView extends ChessViewBase {
                                         dialog.dismiss();
 
                                         int move, size = _jni.getMoveArraySize();
-                                        for(int i = 0; i < size ; i++){
+                                        for (int i = 0; i < size; i++) {
                                             move = _jni.getMoveArrayAt(i);
-                                            if(Move.getFrom(move) == m_iFrom){
-                                                if(Move.getTo(move) == finalIndex && (Move.isOO(move) || Move.isOOO(move))){
+                                            if (Move.getFrom(move) == m_iFrom) {
+                                                if (Move.getTo(move) == finalIndex && (Move.isOO(move) || Move.isOOO(move))) {
                                                     continueMove(finalIndex, true, move);
                                                     return;
                                                 }
@@ -469,11 +505,11 @@ public class PubnubChessView extends ChessViewBase {
                                 builder.setNegativeButton(R.string.alert_no, new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int item) {
                                         dialog.dismiss();
-                                        if(m_iFrom != finalIndex){
+                                        if (m_iFrom != finalIndex) {
                                             int move, size = _jni.getMoveArraySize();
-                                            for(int i = 0; i < size; i++){
+                                            for (int i = 0; i < size; i++) {
                                                 move = _jni.getMoveArrayAt(i);
-                                                if(Move.getTo(move) == finalIndex && (false == Move.isOO(move)) && (false == Move.isOOO(move))){
+                                                if (Move.getTo(move) == finalIndex && (false == Move.isOO(move)) && (false == Move.isOOO(move))) {
                                                     continueMove(finalIndex, true, move);
                                                     return;
                                                 }
@@ -491,7 +527,7 @@ public class PubnubChessView extends ChessViewBase {
 
                         }
                     }
-                } catch(Exception e){
+                } catch (Exception e) {
                     System.gc();
                 }
 
@@ -499,11 +535,12 @@ public class PubnubChessView extends ChessViewBase {
             }
         }
     }
-    private void continueMove(int index, boolean isValid, int move){
-        if(isValid){
+
+    private void continueMove(int index, boolean isValid, int move) {
+        if (isValid) {
             _bHandleClick = false;
             // if confirm and is playing, first let user confirm
-            if(_bConfirmMove && isUserPlaying()){
+            if (_bConfirmMove && isUserPlaying()) {
 
                 _tvLastMove.setText("");
                 //
@@ -520,9 +557,9 @@ public class PubnubChessView extends ChessViewBase {
                 // test and make move if valid move
                 //
                 String sMove = "";
-                if(Move.isOO(move)){
+                if (Move.isOO(move)) {
                     sMove = "0-0";
-                } else if(Move.isOOO(move)){
+                } else if (Move.isOOO(move)) {
                     sMove = "0-0-0";
                 } else {
                     sMove = Pos.toString(m_iFrom) + "-" + Pos.toString(index);

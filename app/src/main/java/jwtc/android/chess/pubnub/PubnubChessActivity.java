@@ -19,12 +19,12 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import jwtc.android.chess.MyBaseActivity;
 import jwtc.android.chess.R;
-import jwtc.chess.Pos;
 
 public class PubnubChessActivity extends MyBaseActivity {
 
@@ -158,7 +158,6 @@ public class PubnubChessActivity extends MyBaseActivity {
                 if(sender.equalsIgnoreCase(opponentName)){
                     move = jsonObject.getString("move");
                     get_view().paintMove(move);
-                    //switchToBoardView();
                 }else{
                     Log.d(LOG_TAG, "Hey, that's my move. Just ignore it.");
                 }
@@ -169,6 +168,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                 if(acceptor.equalsIgnoreCase(myName)){
                     opponentName = initiator;
                     get_view().setOpponent(opponentName);
+                    get_view().setMe(myName);
                     get_view().startGame(false);
                     setPubnubStatePlaying();
                 }
@@ -184,23 +184,26 @@ public class PubnubChessActivity extends MyBaseActivity {
                     setPubnubStatePlaying();
                 }*/
             }else if (null != game && game.equalsIgnoreCase("end")) {
-                String pgn = jsonObject.getString("result");
-                new AlertDialog.Builder(this)
-                        .setTitle("Congrats, you win!")
-                        .setMessage("Game PGN:")
-                        .setMessage(pgn)
-                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                // do nothing
-                            }
-                        })
-                        .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                // do nothing
-                            }
-                        })
-                        .setIcon(android.R.drawable.ic_dialog_alert)
-                        .show();
+                if(jsonObject.getString("winner").equalsIgnoreCase(myName)){
+                    JSONObject jsonPGN = jsonObject.getJSONObject("result");
+                    String pgn = fromJsonToPGN(jsonPGN);
+                    new AlertDialog.Builder(this)
+                            .setTitle("Congrats, you win!")
+                            .setMessage("Game PGN:")
+                            .setMessage(pgn)
+                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // do nothing
+                                }
+                            })
+                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // do nothing
+                                }
+                            })
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show();
+                }
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -246,5 +249,28 @@ public class PubnubChessActivity extends MyBaseActivity {
         return true;
     }
 
+    private String fromJsonToPGN(JSONObject json) throws JSONException {
+        String result = "";
+        String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
+        for (int i = 0; i < arrHead.length; i++) {
+            try {
+                result += "[" + arrHead[i] + " \"" + json.getString(arrHead[i]) + "\"]\n";
+            } catch (JSONException e) {
+                continue;
+            }
+        }
+        JSONArray jsonArray = json.getJSONArray("moves");
+        int moveNum = 1;
+        result += "\n";
+        for (int i = 0; i < jsonArray.length(); i = i + 2) {
+            result += moveNum + "." + jsonArray.get(i) + " ";
+            if(i+1 < jsonArray.length()){
+                result += jsonArray.get(i + 1) + " ";
+            }
+            moveNum++;
+        }
+        result += "\n";
+        return result;
+    }
 
 }
