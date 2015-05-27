@@ -72,71 +72,17 @@ public class PubnubService extends Service {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                Callback callback = new Callback() {
-                    public void successCallback(String channel, Object response) {
-                        Log.d(LOG_TAG, response.toString());
-                    }
-
-                    public void errorCallback(String channel, PubnubError error) {
-                        Log.d(LOG_TAG, error.toString());
-                    }
-                };
-                pubnub.publish(CHANNEL, message, callback);
+                pubnub.publish(CHANNEL, message, getPubnubPublishCallback());
             }
         }).start();
     }
-
 
     void subscribeToPubnubChannel() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Callback callback = new Callback() {
-                        @Override
-                        public void successCallback(String channel, Object message) {
-                            super.successCallback(channel, message);
-                            Log.d(LOG_TAG, "Success callback to Pubnub channel." + message.toString());
-                            if (PubnubChessActivity.isActive) {
-                                Intent intent = new Intent().putExtra(PubnubChessActivity.PARAM_RESULT, message.toString());
-                                try {
-                                    pendingIntent.send(PubnubService.this, PubnubChessActivity.STATUS_FINISH, intent);
-                                } catch (PendingIntent.CanceledException e) {
-                                    Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
-                                }
-                            } else {
-                                Intent myIntent = new Intent(PubnubService.this, PubnubChessActivity.class);
-                                myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                myIntent.putExtra("game_create", message.toString());
-                                startActivity(myIntent);
-                            }
-                        }
-
-                        @Override
-                        public void errorCallback(String channel, PubnubError error) {
-                            super.errorCallback(channel, error);
-                            Log.d(LOG_TAG, "Error during subscribe to Pubnub channel.");
-                        }
-
-                        @Override
-                        public void connectCallback(String channel, Object message) {
-                            super.connectCallback(channel, message);
-                            Log.d(LOG_TAG, "Subscribe to Pubnub channel.");
-                        }
-
-                        @Override
-                        public void reconnectCallback(String channel, Object message) {
-                            super.reconnectCallback(channel, message);
-                            Log.d(LOG_TAG, "Reconnect to Pubnub channel.");
-                        }
-
-                        @Override
-                        public void disconnectCallback(String channel, Object message) {
-                            super.disconnectCallback(channel, message);
-                            Log.d(LOG_TAG, "Disconnect to Pubnub channel.");
-                        }
-                    };
-                    pubnub.subscribe(CHANNEL, callback);
+                    pubnub.subscribe(CHANNEL, getPubnubSubscribeCallback());
                 } catch (PubnubException e) {
                     Log.d(LOG_TAG, "SUBSCRIBE_ERROR" + e.toString());
                 }
@@ -144,19 +90,12 @@ public class PubnubService extends Service {
         }).start();
     }
 
-    void setPubnubState(final String uuid, final Callback callback) {
+    void setPubnubState(final String uuid, final JSONObject state ) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                JSONObject state = new JSONObject();
-                try {
-                    state.put("status", "waiting");
-                } catch (JSONException e) {
-                    Log.d(LOG_TAG, "STATE_JSON_ERROR" + e.toString());
-                    return;
-                }
                 pubnub.setUUID(uuid);
-                pubnub.setState(CHANNEL, uuid, state, callback);
+                pubnub.setState(CHANNEL, uuid, state, getPubnubStateCallback());
             }
         }).start();
     }
@@ -173,28 +112,12 @@ public class PubnubService extends Service {
                         e.printStackTrace();
                     }
                 }
-                Callback callback = new Callback() {
-                    public void successCallback(String channel, Object response) {
-                        Log.d("PUBNUB", "HERE_NOW_RESPONSE" + response.toString());
-                        ArrayList<PubnubUser> users = parseJsonHereNowResponse(response);
-                        Intent intent = new Intent().putExtra(PubnubUserListActivity.PARAM_RESULT, users);
-                        try {
-                            pendingIntent.send(PubnubService.this, PubnubUserListActivity.STATUS_FINISH, intent);
-                        } catch (PendingIntent.CanceledException e) {
-                            Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
-                        }
-                    }
-
-                    public void errorCallback(String channel, PubnubError error) {
-                        Log.d("PUBNUB", "HERE_NOW_ERROR" + error.toString());
-                    }
-                };
                 try {
                     pendingIntent.send(PubnubUserListActivity.STATUS_START);
                 } catch (PendingIntent.CanceledException e) {
                     Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send STATUS_START to Activity: " + e.toString());
                 }
-                pubnub.hereNow(CHANNEL, true, true, callback);
+                pubnub.hereNow(CHANNEL, true, true, getPubnubHereNowCallback());
             }
         }).start();
     }
@@ -234,6 +157,97 @@ public class PubnubService extends Service {
         }
         return users;
     }
+
+    private Callback getPubnubSubscribeCallback(){
+        Callback callback = new Callback() {
+            @Override
+            public void successCallback(String channel, Object message) {
+                super.successCallback(channel, message);
+                Log.d(LOG_TAG, "Success callback to Pubnub channel." + message.toString());
+                if (PubnubChessActivity.isActive) {
+                    Intent intent = new Intent().putExtra(PubnubChessActivity.PARAM_RESULT, message.toString());
+                    try {
+                        pendingIntent.send(PubnubService.this, PubnubChessActivity.STATUS_FINISH, intent);
+                    } catch (PendingIntent.CanceledException e) {
+                        Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
+                    }
+                } else {
+                    Intent myIntent = new Intent(PubnubService.this, PubnubChessActivity.class);
+                    myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    myIntent.putExtra("game_create", message.toString());
+                    startActivity(myIntent);
+                }
+            }
+            @Override
+            public void errorCallback(String channel, PubnubError error) {
+                super.errorCallback(channel, error);
+                Log.d(LOG_TAG, "Error during subscribe to Pubnub channel.");
+            }
+            @Override
+            public void connectCallback(String channel, Object message) {
+                super.connectCallback(channel, message);
+                Log.d(LOG_TAG, "Subscribe to Pubnub channel.");
+            }
+
+            @Override
+            public void reconnectCallback(String channel, Object message) {
+                super.reconnectCallback(channel, message);
+                Log.d(LOG_TAG, "Reconnect to Pubnub channel.");
+            }
+
+            @Override
+            public void disconnectCallback(String channel, Object message) {
+                super.disconnectCallback(channel, message);
+                Log.d(LOG_TAG, "Disconnect to Pubnub channel.");
+            }
+        };
+        return callback;
+    }
+
+    private Callback getPubnubHereNowCallback(){
+        Callback callback = new Callback() {
+            public void successCallback(String channel, Object response) {
+                Log.d("PUBNUB", "HERE_NOW_RESPONSE" + response.toString());
+                ArrayList<PubnubUser> users = parseJsonHereNowResponse(response);
+                Intent intent = new Intent().putExtra(PubnubUserListActivity.PARAM_RESULT, users);
+                try {
+                    pendingIntent.send(PubnubService.this, PubnubUserListActivity.STATUS_FINISH, intent);
+                } catch (PendingIntent.CanceledException e) {
+                    Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
+                }
+            }
+            public void errorCallback(String channel, PubnubError error) {
+                Log.d("PUBNUB", "HERE_NOW_ERROR" + error.toString());
+            }
+        };
+        return callback;
+    }
+
+    private Callback getPubnubStateCallback(){
+        Callback callback = new Callback() {
+            public void successCallback(String channel, Object response) {
+                Log.d("PUBNUB", "STATE_RESPONSE: " + response.toString());
+            }
+            public void errorCallback(String channel, PubnubError error) {
+                Log.d("PUBNUB", "STATE_ERROR" + error.toString());
+            }
+        };
+        return callback;
+    }
+
+    private Callback getPubnubPublishCallback(){
+        Callback callback = new Callback() {
+            public void successCallback(String channel, Object response) {
+                Log.d(LOG_TAG, response.toString());
+            }
+
+            public void errorCallback(String channel, PubnubError error) {
+                Log.d(LOG_TAG, error.toString());
+            }
+        };
+        return callback;
+    }
+
 
 
 }

@@ -1,8 +1,10 @@
 package jwtc.android.chess.pubnub;
 
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -41,7 +43,6 @@ public class PubnubChessActivity extends MyBaseActivity {
     public static final int STATUS_FINISH = 200;
     public final static String PARAM_RESULT = "result";
     static boolean isActive = false;
-    static boolean isGameCreateRequestSend = false;
 
     private String opponentName = null;
     private String myName = null;
@@ -100,17 +101,8 @@ public class PubnubChessActivity extends MyBaseActivity {
         if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
-        //isActive = false;
-        isGameCreateRequestSend = false;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onStop();
-        if (!bound) return;
-        unbindService(serviceConnection);
-        bound = false;
-        //isActive = false;
+        isActive = false;
+        setPubnubStateWaiting();
     }
 
     @Override
@@ -132,13 +124,17 @@ public class PubnubChessActivity extends MyBaseActivity {
             PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
             Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
             startService(intent);
+            opponentName = getIntent().getStringExtra("uuid");
             myName = pubnubService.getUUID();
             String gameCreate = getIntent().getStringExtra("game_create");
             if (!TextUtils.isEmpty(gameCreate)) {
                 parsePubnubJson(gameCreate);
             } else {
-                gameCreate = "{ game : 'create', acceptor: '',  initiator : '" + myName + "'}";
-                pubnubService.publishToPubnubChannel(gameCreate);
+                gameCreate = "{ game : 'create',  initiator : '" + myName + "', acceptor: '" + opponentName + "' }";
+                get_view().setOpponent(opponentName);
+                get_view().startGame(true);
+                get_view().setMe(myName);
+                if(setPubnubStatePlaying()) pubnubService.publishToPubnubChannel(gameCreate);
             }
         }
 
@@ -161,11 +157,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                 String sender = jsonObject.getString("user");
                 if(sender.equalsIgnoreCase(opponentName)){
                     move = jsonObject.getString("move");
-                    String[] moveArray = move.split("-");
-                    Log.d(LOG_TAG, "Paint move: " + move);
-                    int from = Pos.fromString(moveArray[0]);
-                    int to = Pos.fromString(moveArray[1]);
-                    get_view().paintMove(from, to);
+                    get_view().paintMove(move);
                     //switchToBoardView();
                 }else{
                     Log.d(LOG_TAG, "Hey, that's my move. Just ignore it.");
@@ -174,7 +166,13 @@ public class PubnubChessActivity extends MyBaseActivity {
                 String initiator = jsonObject.getString("initiator");
                 String acceptor = jsonObject.getString("acceptor");
                 get_view().setMe(myName);
-                if(!TextUtils.isEmpty(acceptor) && !acceptor.equalsIgnoreCase(myName)){
+                if(acceptor.equalsIgnoreCase(myName)){
+                    opponentName = initiator;
+                    get_view().setOpponent(opponentName);
+                    get_view().startGame(false);
+                    setPubnubStatePlaying();
+                }
+                /*if(!TextUtils.isEmpty(acceptor) && !acceptor.equalsIgnoreCase(myName)){
                     opponentName = acceptor;
                     get_view().setOpponent(opponentName);
                     get_view().startGame(true);
@@ -183,7 +181,26 @@ public class PubnubChessActivity extends MyBaseActivity {
                     get_view().setOpponent(opponentName);
                     get_view().startGame(false);
                     pubnubService.publishToPubnubChannel( "{ game : 'create', initiator: '" + opponentName + "', acceptor : '" + myName + "'}");
-                }
+                    setPubnubStatePlaying();
+                }*/
+            }else if (null != game && game.equalsIgnoreCase("end")) {
+                String pgn = jsonObject.getString("result");
+                new AlertDialog.Builder(this)
+                        .setTitle("Congrats, you win!")
+                        .setMessage("Game PGN:")
+                        .setMessage(pgn)
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                // do nothing
+                            }
+                        })
+                        .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                // do nothing
+                            }
+                        })
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .show();
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -204,5 +221,30 @@ public class PubnubChessActivity extends MyBaseActivity {
     public PubnubChessView get_view() {
         return _view;
     }
+
+    private boolean setPubnubStatePlaying(){
+        JSONObject state = new JSONObject();
+        try {
+            state.put("status", "playing");
+            pubnubService.setPubnubState(myName, state);
+        } catch (JSONException e) {
+            Log.d(LOG_TAG, "STATE_JSON_ERROR" + e.toString());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean setPubnubStateWaiting(){
+        JSONObject state = new JSONObject();
+        try {
+            state.put("status", "waiting");
+            pubnubService.setPubnubState(myName, state);
+        } catch (JSONException e) {
+            Log.d(LOG_TAG, "STATE_JSON_ERROR" + e.toString());
+            return false;
+        }
+        return true;
+    }
+
 
 }

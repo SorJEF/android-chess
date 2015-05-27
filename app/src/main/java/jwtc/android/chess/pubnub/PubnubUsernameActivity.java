@@ -15,8 +15,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.pubnub.api.Callback;
-import com.pubnub.api.PubnubError;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import jwtc.android.chess.R;
 
@@ -53,15 +53,9 @@ public class PubnubUsernameActivity extends Activity {
         }else{
             if(!bound) return;
             startService(intent);
-            Callback callback = new Callback() {
-                public void successCallback(String channel, Object response) {
-                    Log.d("PUBNUB", "STATE_RESPONSE: " + response.toString());
-                }
-                public void errorCallback(String channel, PubnubError error) {
-                    Log.d("PUBNUB", "STATE_ERROR" + error.toString());
-                }
-            };
-            pubnubService.setPubnubState(username, callback);
+            JSONObject state = getJsonStateObject();
+            if(null == state) return;
+            pubnubService.setPubnubState(username, state);
             startUserListActivity(username);
         }
     }
@@ -110,5 +104,16 @@ public class PubnubUsernameActivity extends Activity {
         b.putString("uuid", uuid);
         intent.putExtras(b);
         startActivity(intent);
+    }
+
+    private JSONObject getJsonStateObject(){
+        JSONObject state = new JSONObject();
+        try {
+            state.put("status", "waiting");
+        } catch (JSONException e) {
+            Log.d(LOG_TAG, "STATE_JSON_ERROR" + e.toString());
+            return null;
+        }
+        return state;
     }
 }

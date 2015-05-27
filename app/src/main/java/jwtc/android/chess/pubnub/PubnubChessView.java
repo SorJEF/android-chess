@@ -12,6 +12,12 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.ViewSwitcher;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -20,13 +26,17 @@ import jwtc.android.chess.ChessViewBase;
 import jwtc.android.chess.R;
 import jwtc.chess.JNI;
 import jwtc.chess.Move;
+import jwtc.chess.PGNEntry;
 import jwtc.chess.Pos;
 import jwtc.chess.board.BoardConstants;
 import jwtc.chess.board.BoardMembers;
+import jwtc.chess.board.ChessBoard;
 
 public class PubnubChessView extends ChessViewBase {
     private JNI _jni;
     private static final String LOG_TAG = "PUBNUB";
+    private List<PGNEntry> _arrPGN;
+    private HashMap<String,String> _mapPGNHead;
 
     public JNI getJni(){
         return _jni;
@@ -67,6 +77,8 @@ public class PubnubChessView extends ChessViewBase {
         _jni.reset();
 
         _parent = (PubnubChessActivity)activity;
+        _arrPGN = new ArrayList<PGNEntry>();
+        _mapPGNHead = new HashMap<String, String>();
 
         m_iFrom = -1;
         m_iTo = -1;
@@ -196,15 +208,68 @@ public class PubnubChessView extends ChessViewBase {
         _bConfirmMove = b;
     }
 
-    public void paintMove(int from, int to){
-        m_iTo = to;
-        m_iFrom = from;
+    private void parseMove(String move){
+        String[] moveArray = move.split("-");
+        m_iFrom = Pos.fromString(moveArray[0]);
+        m_iTo = Pos.fromString(moveArray[1]);
+    }
+
+    public void paintMove(String move){
+        Log.d(LOG_TAG, "Paint move: " + move);
+        parseMove(move);
         resetImageCache();
-        _jni.requestMove(from, to);
+        _jni.requestMove(m_iFrom, m_iTo);
+        addPGNEntry(_jni.getMyMoveToString(), "", _jni.getMove());
         _bHandleClick = true;
+        int state = _jni.getState();
         paint();
+        checkGameState(state);
         m_iFrom = -1;
         m_iTo = -1;
+    }
+
+    private void checkGameState(int state){
+        switch (state){
+            case ChessBoard.MATE:
+                _tvPlayerBottom.setText(R.string.state_mate);
+                setPGNHeadProperty("Result", "0-1"); // If this switch execute - that's mean I lose. That's why 0-1, not 1-0.
+                String pgn = exportFullPGN();
+                _parent.sendString("{game: 'end', result: '" + pgn + "'}");
+                new AlertDialog.Builder(_parent)
+                        .setTitle("Oh, that's mate!")
+                        .setMessage("Game PGN:")
+                        .setMessage(pgn)
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                // do nothing
+                            }
+                        })
+                        .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                // do nothing
+                            }
+                        })
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .show();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void initPGNHead(){
+        _mapPGNHead.clear();
+        Date d = Calendar.getInstance().getTime();
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy.MM.dd");
+        setPGNHeadProperty("Date", formatter.format(d));
+        setPGNHeadProperty("Event", _me + " vs. " + _opponent);
+        setPGNHeadProperty("White", _whitePlayer);
+        setPGNHeadProperty("Black", _blackPlayer);
+        _arrPGN.clear();
+    }
+
+    private void setPGNHeadProperty(String sProp, String sValue){
+        _mapPGNHead.put(sProp, sValue);
     }
 
     public void startGame(boolean iStart){
@@ -231,6 +296,7 @@ public class PubnubChessView extends ChessViewBase {
             _tvClockTop.setText(parseTime(_iBlackRemaining));
             _tvClockBottom.setText(parseTime(_iWhiteRemaining));
         }
+        initPGNHead();
         _bHandleClick = true;
         setConfirmMove(true);
         setViewMode(PubnubChessView.VIEW_PLAY);
@@ -243,6 +309,46 @@ public class PubnubChessView extends ChessViewBase {
 
     private void paint(){
         paintBoard(_jni, new int[]{m_iFrom, m_iTo}, null);
+    }
+
+    public void addPGNEntry(String sMove, String sAnnotation, int move){
+        _arrPGN.add(new PGNEntry(sMove, sAnnotation, move));
+    }
+
+    private String exportFullPGN(){
+        String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate",
+                "Variant", "Setup",	"FEN", "PlyCount"};
+        String s = "", key;
+        for(int i = 0; i < arrHead.length;i++){
+            key = arrHead[i];
+            if(_mapPGNHead.containsKey(key))
+                s +=  "[" + key + " \"" + _mapPGNHead.get(key) + "\"]\n";
+        }
+        s += exportMovesPGN();
+        s += "\n";
+        return s;
+    }
+
+    private String exportMovesPGN(){
+        return exportMovesPGNFromPly(1);
+    }
+
+    private String exportMovesPGNFromPly(int iPly){
+        String s = "";
+        if(iPly > 0){
+            iPly--;
+        }
+        if(iPly < 0){
+            iPly = 0;
+        }
+        for(int i = iPly; i < _arrPGN.size(); i++){
+            if((i-iPly) % 2 == 0)
+                s += ((i-iPly)/2 + 1) + ". ";
+            s += _arrPGN.get(i)._sMove + " ";
+            if(_arrPGN.get(i)._sAnnotation.length() > 0)
+                s += " {" +_arrPGN.get(i)._sAnnotation + "}\n ";
+        }
+        return s;
     }
 
     public void handleClick(int index){
@@ -405,6 +511,8 @@ public class PubnubChessView extends ChessViewBase {
                 _viewSwitchConfirm.setDisplayedChild(1);
 
                 _jni.move(move);
+
+                addPGNEntry(_jni.getMyMoveToString(), "", _jni.getMyMove());
                 paint();
 
             } else {
