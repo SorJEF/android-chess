@@ -15,6 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class PubnubUserListActivity extends ListActivity {
     private static final String LOG_TAG = "PUBNUB";
@@ -73,8 +74,9 @@ public class PubnubUserListActivity extends ListActivity {
         RelativeLayout vwParentRow = (RelativeLayout)v.getParent();
         TextView child = (TextView)vwParentRow.getChildAt(0);
         String acceptor = child.getText().toString();
-        String initiator = getIntent().getStringExtra("uuid");
-        String gameCreate = "{ game : 'create',  initiator : '" + initiator + "', acceptor: '" + acceptor + "' }";
+        String initiator = getIntent().getStringExtra("myName");
+        String gameId = UUID.randomUUID().toString();
+        String gameCreate = "{ game : 'create',  initiator : '" + initiator + "', acceptor: '" + acceptor + "', gameId: '" + gameId + "' }";
         Intent i = new Intent();
         i.putExtra("gameCreate", gameCreate);
         i.setClass(PubnubUserListActivity.this, PubnubChessActivity.class);

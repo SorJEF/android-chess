@@ -40,7 +40,10 @@ public class PubnubChessActivity extends MyBaseActivity {
     private PubnubService pubnubService;
     private String opponentName = null;
     private String myName = null;
+    private String gameId;
+
     static boolean isActive = false; // used in PubnubService to understand is PubnubChessActivity active now or not
+    static boolean isGameCreated = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -127,13 +130,14 @@ public class PubnubChessActivity extends MyBaseActivity {
         try {
             jsonObject = new JSONObject(line);
             game = jsonObject.getString("game");
+            String id = jsonObject.getString("gameId");
             if(null != game){
                 GameType gameType = GameType.getType(game);
                 switch(gameType){
                     case CONTINUE:
                         String move;
                         String sender = jsonObject.getString("user");
-                        if(sender.equalsIgnoreCase(opponentName)){ // paint move only if this my opponents move
+                        if(id.equalsIgnoreCase(gameId) && sender.equalsIgnoreCase(opponentName)){ // paint move only if this my opponents move
                             move = jsonObject.getString("move");
                             view.paintMove(move);
                         }
@@ -142,21 +146,26 @@ public class PubnubChessActivity extends MyBaseActivity {
                         String initiator = jsonObject.getString("initiator");
                         String acceptor = jsonObject.getString("acceptor");
                         view.setMe(myName);
-                        if(initiator.equalsIgnoreCase(myName)){ // accept game challenge
+                        if(!isGameCreated && initiator.equalsIgnoreCase(myName)){ // accept game challenge
+                            isGameCreated = true;
+                            gameId = id;
                             opponentName = acceptor;
                             view.setOpponent(opponentName);
+                            view.setGameId(gameId);
                             view.startGame(true);
                             pubnubService.publishToPubnubChannel(jsonObject);
                             setPubnubStatePlaying();
                         }else if(acceptor.equalsIgnoreCase(myName)){
+                            gameId = id;
                             opponentName = initiator;
                             view.setOpponent(opponentName);
+                            view.setGameId(gameId);
                             view.startGame(false);
                             setPubnubStatePlaying();
                         }
                         break;
                     case END:
-                        if(jsonObject.getString("winner").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
+                        if(gameId.equalsIgnoreCase(id) && jsonObject.getString("winner").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
                             JSONObject resultPGN = jsonObject.getJSONObject("result");
                             String pgn = fromJsonToPGN(resultPGN);
                             showWinnerDialog(pgn);

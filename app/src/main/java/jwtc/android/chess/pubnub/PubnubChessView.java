@@ -41,6 +41,7 @@ public class PubnubChessView extends ChessViewBase {
     private static final String LOG_TAG = "PUBNUB";
     private List<PGNEntry> _arrPGN;
     private HashMap<String, String> _mapPGNHead;
+    private String gameId;
 
     public JNI getJni() {
         return _jni;
@@ -125,7 +126,7 @@ public class PubnubChessView extends ChessViewBase {
                 _tvLastMove.setText("...");
                 String sMove = Pos.toString(m_iFrom) + "-" + Pos.toString(m_iTo);
                 try {
-                    _parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', user : '" + _me + "', move : '" + sMove + "'}"));
+                    _parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', gameId: '" + gameId + "', user : '" + _me + "', move : '" + sMove + "'}"));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -393,6 +394,7 @@ public class PubnubChessView extends ChessViewBase {
             result.put("moves", moves);
             pgn.put("result", result);
             pgn.put("game", "end");
+            pgn.put("gameId", gameId);
             pgn.put("winner", _opponent);
         } catch (JSONException e) {
             Log.d(LOG_TAG, "Can't convert pgn to json: " + e.toString());
@@ -584,7 +586,8 @@ public class PubnubChessView extends ChessViewBase {
                 addPGNEntry(_jni.getMyMoveToString(), "", _jni.getMyMove());
                 paint();
 
-            } else {
+            }
+           /* else {
                 //_tvLastMove.setText("...");
                 // test and make move if valid move
                 //
@@ -605,7 +608,7 @@ public class PubnubChessView extends ChessViewBase {
                 m_iTo = index;
                 paint();
                 m_iFrom = -1;
-            }
+            }*/
         } else {
             m_iFrom = -1;
             // show that move is invalid
@@ -619,5 +622,9 @@ public class PubnubChessView extends ChessViewBase {
 
     public void setOpponent(String _opponent) {
         this._opponent = _opponent;
+    }
+
+    public void setGameId(String gameId) {
+        this.gameId = gameId;
     }
 }

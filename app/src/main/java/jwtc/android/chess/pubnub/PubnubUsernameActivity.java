@@ -98,10 +98,10 @@ public class PubnubUsernameActivity extends Activity {
         }
     };
 
-    private void startUserListActivity(String uuid) {
+    private void startUserListActivity(String myName) {
         Intent intent = new Intent(getApplicationContext(), PubnubUserListActivity.class);
         Bundle b = new Bundle();
-        b.putString("uuid", uuid);
+        b.putString("myName", myName);
         intent.putExtras(b);
         startActivity(intent);
     }
