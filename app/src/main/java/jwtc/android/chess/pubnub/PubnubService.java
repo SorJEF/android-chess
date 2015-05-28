@@ -25,7 +25,9 @@ public class PubnubService extends Service {
     private static final String PUBLISH_KEY = "pub-c-067bc448-4128-49dd-b522-8b8ff9e038f0";
     private static final String CHANNEL = "chess_channel";
     private final Pubnub pubnub = new Pubnub(PUBLISH_KEY, SUBSCRIBE_KEY, true);
-    private PendingIntent pendingIntent;
+    ArrayList<PubnubUser> users = null;
+    private PendingIntent pendingChessIntent;
+    private PendingIntent pendingUserListIntent;
 
     /**
      * Class for clients to access.  Because we know this service always
@@ -51,7 +53,8 @@ public class PubnubService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i("PubnubService", "Received start id " + startId + ": " + intent);
-        pendingIntent = intent.getParcelableExtra(PubnubUserListActivity.PARAM_PINTENT);
+        pendingUserListIntent = intent.getParcelableExtra(PubnubUserListActivity.PARAM_PINTENT);
+        pendingChessIntent = intent.getParcelableExtra(PubnubChessActivity.PARAM_PINTENT);
         // We want this service to continue running until it is explicitly
         // stopped, so return sticky.
         return START_STICKY;
@@ -77,16 +80,6 @@ public class PubnubService extends Service {
         }).start();
     }
 
-    /*void publishJsonToPubnubChannel(final JSONObject message) {
-        Log.d(LOG_TAG, "Publish to Pubnub: " + message);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                pubnub.publish(CHANNEL, message, getPubnubPublishCallback());
-            }
-        }).start();
-    }*/
-
     void subscribeToPubnubChannel() {
         new Thread(new Runnable() {
             @Override
@@ -100,7 +93,7 @@ public class PubnubService extends Service {
         }).start();
     }
 
-    void setPubnubState(final String uuid, final JSONObject state ) {
+    void setPubnubState(final String uuid, final JSONObject state) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -114,7 +107,7 @@ public class PubnubService extends Service {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (null == pendingIntent) {
+                while (null == pendingUserListIntent) {
                     try {
                         Thread.sleep(100);
                         Log.d(LOG_TAG, "Sleep");
@@ -123,7 +116,7 @@ public class PubnubService extends Service {
                     }
                 }
                 try {
-                    pendingIntent.send(PubnubUserListActivity.STATUS_START);
+                    pendingUserListIntent.send(PubnubUserListActivity.STATUS_START);
                 } catch (PendingIntent.CanceledException e) {
                     Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send STATUS_START to Activity: " + e.toString());
                 }
@@ -136,7 +129,7 @@ public class PubnubService extends Service {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (null == pendingIntent) {
+                while (null == pendingUserListIntent) {
                     try {
                         Thread.sleep(100);
                         Log.d(LOG_TAG, "Sleep");
@@ -145,7 +138,7 @@ public class PubnubService extends Service {
                     }
                 }
                 try {
-                    pendingIntent.send(PubnubUserListActivity.STATUS_START);
+                    pendingUserListIntent.send(PubnubUserListActivity.STATUS_START);
                     pubnub.presence(CHANNEL, getPubnubPresenceCallback());
                 } catch (PubnubException e) {
                     e.printStackTrace();
@@ -161,7 +154,6 @@ public class PubnubService extends Service {
     }
 
     private ArrayList<PubnubUser> parseJsonHereNowResponse(Object response) {
-        ArrayList<PubnubUser> users = null;
         try {
             JSONObject jsonObject = new JSONObject(response.toString());
             JSONArray jsonArray = jsonObject.getJSONArray("uuids");
@@ -174,6 +166,8 @@ public class PubnubService extends Service {
                 try {
                     jsonUser = jsonArray.getJSONObject(i);
                     name = jsonUser.getString("uuid");
+                    if (name.equalsIgnoreCase("system_8648739c-b1da-4a4e-ab2c-f21a380896cf"))
+                        continue;
                 } catch (JSONException e) {
                     continue;
                 }
@@ -197,49 +191,78 @@ public class PubnubService extends Service {
 
             @Override
             public void connectCallback(String channel, Object message) {
-                Log.d("PUBNUB","CONNECT on channel:" + channel
-                        + " : " + message.getClass() + " : "
-                        + message.toString());
+                Log.d(LOG_TAG, "CONNECT on channel:" + channel + " : " + message.getClass() + " : " + message.toString());
             }
 
             @Override
             public void disconnectCallback(String channel, Object message) {
-                Log.d("PUBNUB","DISCONNECT on channel:" + channel
-                        + " : " + message.getClass() + " : "
-                        + message.toString());
+                Log.d(LOG_TAG, "DISCONNECT on channel:" + channel + " : " + message.getClass() + " : " + message.toString());
             }
 
             public void reconnectCallback(String channel, Object message) {
-                Log.d("PUBNUB","RECONNECT on channel:" + channel
-                        + " : " + message.getClass() + " : "
-                        + message.toString());
+                Log.d(LOG_TAG, "RECONNECT on channel:" + channel + " : " + message.getClass() + " : " + message.toString());
             }
 
             @Override
             public void successCallback(String channel, Object message) {
-                Log.d("PUBNUB",channel + " : "
-                        + message.getClass() + " : " + message.toString());
+                Log.d(LOG_TAG, channel + " : " + message.getClass() + " : " + message.toString());
+                if(null == users || !PubnubUserListActivity.isActive || null == pendingUserListIntent) return;
+                try {
+                    JSONObject response = new JSONObject(message.toString());
+                    String action = response.getString("action");
+                    if(action.equalsIgnoreCase("join")){
+                        String newUserName = response.getString("uuid");
+                        PubnubUser pubnubUser = new PubnubUser();
+                        pubnubUser.setName(newUserName);
+                        pubnubUser.setStatus("waiting");
+                        users.add(pubnubUser);
+                        Intent intent = new Intent().putExtra(PubnubUserListActivity.PARAM_RESULT, users);
+                        pendingUserListIntent.send(PubnubService.this, PubnubUserListActivity.STATUS_FINISH, intent);
+                    } else if(action.equalsIgnoreCase("state-change")){
+                        String status = response.getJSONObject("data").getString("status");
+                        String name = response.getString("uuid");
+                        for(PubnubUser user: users){
+                            if(user.getName().equalsIgnoreCase(name)){
+                                user.setStatus(status);
+                                break;
+                            }
+                        }
+                        Intent intent = new Intent().putExtra(PubnubUserListActivity.PARAM_RESULT, users);
+                        pendingUserListIntent.send(PubnubService.this, PubnubUserListActivity.STATUS_FINISH, intent);
+                    }
+                } catch (PendingIntent.CanceledException e) {
+                    Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
 
             @Override
             public void errorCallback(String channel, PubnubError error) {
-                Log.d("PUBNUB","ERROR on channel " + channel
-                        + " : " + error.toString());
+                Log.d(LOG_TAG, "ERROR on channel " + channel + " : " + error.toString());
             }
         };
         return callback;
     }
 
-    private Callback getPubnubSubscribeCallback(){
+    private Callback getPubnubSubscribeCallback() {
         Callback callback = new Callback() {
             @Override
             public void successCallback(String channel, Object message) {
                 super.successCallback(channel, message);
                 Log.d(LOG_TAG, "Success callback to Pubnub channel." + message.toString());
                 if (PubnubChessActivity.isActive) {
+                    while (null == pendingChessIntent) {
+                        try {
+                            Thread.sleep(100);
+                            Log.d(LOG_TAG, "Sleep");
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     Intent intent = new Intent().putExtra(PubnubChessActivity.PARAM_RESULT, message.toString());
                     try {
-                        pendingIntent.send(PubnubService.this, PubnubChessActivity.STATUS_FINISH, intent);
+                        pendingChessIntent.send(PubnubService.this, PubnubChessActivity.STATUS_FINISH, intent);
                     } catch (PendingIntent.CanceledException e) {
                         Log.d("PUBNUB", "PubnubService.pubnubSubscribe(). Can't send result to Activity: " + e.toString());
                     }
@@ -249,7 +272,7 @@ public class PubnubService extends Service {
                     JSONObject jsonObject;
                     try {
                         jsonObject = new JSONObject(message.toString());
-                        if(jsonObject.getString("acceptor").equalsIgnoreCase(getUUID())){
+                        if (jsonObject.getString("acceptor").equalsIgnoreCase(getUUID())) {
                             myIntent.putExtra("gameCreate", message.toString());
                             startActivity(myIntent);
                         }
@@ -258,11 +281,13 @@ public class PubnubService extends Service {
                     }
                 }
             }
+
             @Override
             public void errorCallback(String channel, PubnubError error) {
                 super.errorCallback(channel, error);
                 Log.d(LOG_TAG, "Error during subscribe to Pubnub channel.");
             }
+
             @Override
             public void connectCallback(String channel, Object message) {
                 super.connectCallback(channel, message);
@@ -284,18 +309,19 @@ public class PubnubService extends Service {
         return callback;
     }
 
-    private Callback getPubnubHereNowCallback(){
+    private Callback getPubnubHereNowCallback() {
         Callback callback = new Callback() {
             public void successCallback(String channel, Object response) {
                 Log.d("PUBNUB", "HERE_NOW_RESPONSE" + response.toString());
                 ArrayList<PubnubUser> users = parseJsonHereNowResponse(response);
                 Intent intent = new Intent().putExtra(PubnubUserListActivity.PARAM_RESULT, users);
                 try {
-                    pendingIntent.send(PubnubService.this, PubnubUserListActivity.STATUS_FINISH, intent);
+                    pendingUserListIntent.send(PubnubService.this, PubnubUserListActivity.STATUS_FINISH, intent);
                 } catch (PendingIntent.CanceledException e) {
                     Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
                 }
             }
+
             public void errorCallback(String channel, PubnubError error) {
                 Log.d("PUBNUB", "HERE_NOW_ERROR" + error.toString());
             }
@@ -303,11 +329,12 @@ public class PubnubService extends Service {
         return callback;
     }
 
-    private Callback getPubnubStateCallback(){
+    private Callback getPubnubStateCallback() {
         Callback callback = new Callback() {
             public void successCallback(String channel, Object response) {
                 Log.d("PUBNUB", "STATE_RESPONSE: " + response.toString());
             }
+
             public void errorCallback(String channel, PubnubError error) {
                 Log.d("PUBNUB", "STATE_ERROR" + error.toString());
             }
@@ -315,7 +342,7 @@ public class PubnubService extends Service {
         return callback;
     }
 
-    private Callback getPubnubPublishCallback(){
+    private Callback getPubnubPublishCallback() {
         Callback callback = new Callback() {
             public void successCallback(String channel, Object response) {
                 Log.d(LOG_TAG, response.toString());
@@ -327,7 +354,6 @@ public class PubnubService extends Service {
         };
         return callback;
     }
-
 
 
 }

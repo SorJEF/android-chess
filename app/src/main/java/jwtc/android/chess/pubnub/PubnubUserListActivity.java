@@ -20,11 +20,13 @@ import java.util.UUID;
 public class PubnubUserListActivity extends ListActivity {
     private static final String LOG_TAG = "PUBNUB";
 
-    public static final String PARAM_PINTENT = "pendingIntent";
+    public static final String PARAM_PINTENT = "pendingUserListIntent";
     public static final int STATUS_START = 100;
     public static final int STATUS_FINISH = 200;
     public final static String PARAM_RESULT = "result";
     public static final int USER_LIST_TASK = 1;
+    static boolean isActive = false; // used in PubnubService to understand is PubnubUserListActivity active now or not
+    private String myName;
 
     private PubnubService pubnubService;
     private Intent intent;
@@ -34,6 +36,7 @@ public class PubnubUserListActivity extends ListActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         intent = new Intent(this, PubnubService.class);
+        myName = getIntent().getStringExtra("myName");
         Toast.makeText(PubnubUserListActivity.this, "Download user list", Toast.LENGTH_SHORT).show();
     }
 
@@ -44,6 +47,7 @@ public class PubnubUserListActivity extends ListActivity {
         if (resultCode == STATUS_FINISH && requestCode == USER_LIST_TASK) {
             ArrayList<PubnubUser> users = data.getExtras().getParcelableArrayList(PARAM_RESULT);
             PubnubArrayAdapter adapter = new PubnubArrayAdapter(PubnubUserListActivity.this, users);
+            adapter.setMyName(myName);
             setListAdapter(adapter);
         }
     }
@@ -51,12 +55,15 @@ public class PubnubUserListActivity extends ListActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        myName = getIntent().getStringExtra("myName");
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        isActive = true;
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        isActive = false;
         if(!bound) return;
         unbindService(serviceConnection);
         bound = false;
@@ -71,12 +78,12 @@ public class PubnubUserListActivity extends ListActivity {
     }
 
     public void onUserItemPlayBtnClick(View v){
+        isActive = false;
         RelativeLayout vwParentRow = (RelativeLayout)v.getParent();
         TextView child = (TextView)vwParentRow.getChildAt(0);
         String acceptor = child.getText().toString();
-        String initiator = getIntent().getStringExtra("myName");
         String gameId = UUID.randomUUID().toString();
-        String gameCreate = "{ game : 'create',  initiator : '" + initiator + "', acceptor: '" + acceptor + "', gameId: '" + gameId + "' }";
+        String gameCreate = "{ game : 'create',  initiator : '" + myName + "', acceptor: '" + acceptor + "', gameId: '" + gameId + "' }";
         Intent i = new Intent();
         i.putExtra("gameCreate", gameCreate);
         i.setClass(PubnubUserListActivity.this, PubnubChessActivity.class);
@@ -94,6 +101,7 @@ public class PubnubUserListActivity extends ListActivity {
             startService(intent);
             pubnubService.pubnubHereNow();
             pubnubService.subscribeToPubnubChannel();
+            pubnubService.pubnubPresence();
         }
 
         @Override

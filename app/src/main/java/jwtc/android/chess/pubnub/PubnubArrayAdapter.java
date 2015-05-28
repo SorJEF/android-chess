@@ -16,6 +16,7 @@ public class PubnubArrayAdapter extends ArrayAdapter<PubnubUser>{
 
     private Context context;
     private List<PubnubUser> users;
+    private String myName;
 
     public PubnubArrayAdapter(Context context, List<PubnubUser> users) {
         super(context, R.layout.pubnub_list_item, users);
@@ -49,7 +50,7 @@ public class PubnubArrayAdapter extends ArrayAdapter<PubnubUser>{
         Button playBtn = (Button) rowView.findViewById(R.id.pubnubPlayBtn);
         PubnubUser user = users.get(position);
         userName.setText(user.getName());
-        if(!user.getStatus().equals("waiting")){
+        if(!user.getStatus().equals("waiting") || user.getName().equalsIgnoreCase(myName)){
             playBtn.setVisibility(View.INVISIBLE);
         }
         return rowView;
@@ -63,4 +64,7 @@ public class PubnubArrayAdapter extends ArrayAdapter<PubnubUser>{
         this.users = users;
     }
 
+    public void setMyName(String myName) {
+        this.myName = myName;
+    }
 }

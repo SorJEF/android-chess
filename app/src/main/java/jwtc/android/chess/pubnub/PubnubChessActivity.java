@@ -30,7 +30,7 @@ public class PubnubChessActivity extends MyBaseActivity {
 
     public static final int SUBSCRIBE_TASK = 1;
     public static final int STATUS_FINISH = 200;
-    public static final String PARAM_PINTENT = "pendingIntent";
+    public static final String PARAM_PINTENT = "pendingChessIntent";
     public static final String PARAM_RESULT = "result";
     private static final String LOG_TAG = "PUBNUB";
 
