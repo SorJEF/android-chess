@@ -146,7 +146,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                             opponentName = acceptor;
                             view.setOpponent(opponentName);
                             view.startGame(true);
-                            pubnubService.publishToPubnubChannel(line);
+                            pubnubService.publishToPubnubChannel(jsonObject);
                             setPubnubStatePlaying();
                         }else if(acceptor.equalsIgnoreCase(myName)){
                             opponentName = initiator;
@@ -157,8 +157,8 @@ public class PubnubChessActivity extends MyBaseActivity {
                         break;
                     case END:
                         if(jsonObject.getString("winner").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
-                            JSONObject jsonPGN = jsonObject.getJSONObject("result");
-                            String pgn = fromJsonToPGN(jsonPGN);
+                            JSONObject resultPGN = jsonObject.getJSONObject("result");
+                            String pgn = fromJsonToPGN(resultPGN);
                             showWinnerDialog(pgn);
                         }
                         break;
@@ -167,13 +167,20 @@ public class PubnubChessActivity extends MyBaseActivity {
                 }
             }
         } catch (JSONException e) {
+
             Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + e.toString());
         }
     }
 
-    public void sendString(String s) {
+    /*public void sendString(String s) {
         if (!TextUtils.isEmpty(s)) {
             pubnubService.publishToPubnubChannel(s);
+        }
+    }*/
+
+    public void sendJsonToPubnub(JSONObject o) {
+        if (null != o) {
+            pubnubService.publishToPubnubChannel(o);
         }
     }
 

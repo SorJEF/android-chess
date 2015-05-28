@@ -6,6 +6,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import jwtc.android.chess.R;
 
 public class PubnubConfimDialog extends Dialog {
@@ -28,7 +31,11 @@ public class PubnubConfimDialog extends Dialog {
         Button butYes = (Button)findViewById(R.id.ButtonConfirmYes);
         butYes.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0) {
-                _parent.sendString(_sendString);
+                try {
+                    _parent.sendJsonToPubnub(new JSONObject(_sendString));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
                 dismiss();
             }
         });

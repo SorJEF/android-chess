@@ -124,7 +124,11 @@ public class PubnubChessView extends ChessViewBase {
 
                 _tvLastMove.setText("...");
                 String sMove = Pos.toString(m_iFrom) + "-" + Pos.toString(m_iTo);
-                _parent.sendString("{ game : 'continue', user : '" + _me + "', move : '" + sMove + "'}");
+                try {
+                    _parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', user : '" + _me + "', move : '" + sMove + "'}"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
                 m_iFrom = -1;
                 // switch back
                 _viewSwitchConfirm.setDisplayedChild(0);
@@ -252,8 +256,9 @@ public class PubnubChessView extends ChessViewBase {
             case ChessBoard.MATE:
                 _tvPlayerBottom.setText(R.string.state_mate);
                 setPGNHeadProperty("Result", "0-1"); // If this switch execute - that's mean I lose. That's why 0-1, not 1-0.
-                String pgnJson = exportFullJsonPGN();
-                _parent.sendString("{game: 'end', winner: '" + _opponent + "', result: " + pgnJson + "}");
+                JSONObject pgnJson = exportJsonPGN();
+                //_parent.sendString("{game: 'end', winner: '" + _opponent + "', result: " + pgnJson + "}");
+                _parent.sendJsonToPubnub(pgnJson);
                 new AlertDialog.Builder(_parent)
                         .setTitle("Oh, that's mate!")
                         .setMessage("Game PGN:")
@@ -352,20 +357,47 @@ public class PubnubChessView extends ChessViewBase {
         String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
         String key;
         String head = "";
+        for (int i = 0; i < arrHead.length; i++) {
+            key = arrHead[i];
+            if (_mapPGNHead.containsKey(key)) {
+                head += key + ": '" + _mapPGNHead.get(key) + "', ";
+            }
+        }
+        String moves = "";
+        for (int i = 0; i < _arrPGN.size(); i++) {
+            moves += "'" + _arrPGN.get(i)._sMove + "'";
+            if (i + 1 < _arrPGN.size()) {
+                moves += ", ";
+            }
+        }
+        String pgn = "{" + head + "moves: [" + moves + "]}";
+        return pgn;
+    }
+
+    private JSONObject exportJsonPGN() {
+        JSONObject pgn = new JSONObject();
+        String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
+        String key;
+        JSONObject result = new JSONObject();
+        try {
             for (int i = 0; i < arrHead.length; i++) {
                 key = arrHead[i];
-                if (_mapPGNHead.containsKey(key)){
-                    head += key + ": '" + _mapPGNHead.get(key) + "', ";
+                if (_mapPGNHead.containsKey(key)) {
+                    result.put(key, _mapPGNHead.get(key));
                 }
             }
-            String moves = "";
+            JSONArray moves = new JSONArray();
             for (int i = 0; i < _arrPGN.size(); i++) {
-                moves += "'" + _arrPGN.get(i)._sMove + "'";
-                if(i + 1 < _arrPGN.size()){
-                    moves += ", ";
-                }
+                moves.put(_arrPGN.get(i)._sMove);
             }
-            String pgn = "{" + head + "moves: [" + moves + "]}";
+            result.put("moves", moves);
+            pgn.put("result", result);
+            pgn.put("game", "end");
+            pgn.put("winner", _opponent);
+        } catch (JSONException e) {
+            Log.d(LOG_TAG, "Can't convert pgn to json: " + e.toString());
+        }
+
         return pgn;
     }
 
@@ -449,7 +481,7 @@ public class PubnubChessView extends ChessViewBase {
                                 }
                             }
 
-                            if (isPromotion) {
+                            /*if (isPromotion) {
                                 final String[] items = _parent.getResources().getStringArray(R.array.promotionpieces);
                                 final int finalIndex = index;
 
@@ -478,7 +510,7 @@ public class PubnubChessView extends ChessViewBase {
                                 alert.show();
 
                                 return;
-                            }
+                            }*/
 
                             if (isCastle) {
 
@@ -565,7 +597,11 @@ public class PubnubChessView extends ChessViewBase {
                     sMove = Pos.toString(m_iFrom) + "-" + Pos.toString(index);
                 }
                 //_jni.requestMove(m_iFrom, index);
-                _parent.sendString("{ game : 'continue', move : '" + sMove + "'}");
+                try {
+                    _parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', move : '" + sMove + "'}"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
                 m_iTo = index;
                 paint();
                 m_iFrom = -1;

@@ -67,7 +67,7 @@ public class PubnubService extends Service {
         return mBinder;
     }
 
-    void publishToPubnubChannel(final String message) {
+    void publishToPubnubChannel(final JSONObject message) {
         Log.d(LOG_TAG, "Publish to Pubnub: " + message);
         new Thread(new Runnable() {
             @Override
@@ -76,6 +76,16 @@ public class PubnubService extends Service {
             }
         }).start();
     }
+
+    /*void publishJsonToPubnubChannel(final JSONObject message) {
+        Log.d(LOG_TAG, "Publish to Pubnub: " + message);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                pubnub.publish(CHANNEL, message, getPubnubPublishCallback());
+            }
+        }).start();
+    }*/
 
     void subscribeToPubnubChannel() {
         new Thread(new Runnable() {
@@ -169,15 +179,21 @@ public class PubnubService extends Service {
                     try {
                         pendingIntent.send(PubnubService.this, PubnubChessActivity.STATUS_FINISH, intent);
                     } catch (PendingIntent.CanceledException e) {
-                        Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
+                        Log.d("PUBNUB", "PubnubService.pubnubSubscribe(). Can't send result to Activity: " + e.toString());
                     }
                 } else {
-                    //String gameCreate = "{ game : 'create',  initiator : '', acceptor: '" + getUUID() + "' }";
                     Intent myIntent = new Intent(PubnubService.this, PubnubChessActivity.class);
                     myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    //myIntent.putExtra("game_create", message.toString());
-                    myIntent.putExtra("gameCreate", message.toString());
-                    startActivity(myIntent);
+                    JSONObject jsonObject;
+                    try {
+                        jsonObject = new JSONObject(message.toString());
+                        if(jsonObject.getString("acceptor").equalsIgnoreCase(getUUID())){
+                            myIntent.putExtra("gameCreate", message.toString());
+                            startActivity(myIntent);
+                        }
+                    } catch (JSONException e) {
+                        Log.d("PUBNUB", "PubnubService.pubnubSubscribe(). Can't send result to Activity: " + e.toString());
+                    }
                 }
             }
             @Override
