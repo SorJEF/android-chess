@@ -28,35 +28,24 @@ import jwtc.android.chess.R;
 
 public class PubnubChessActivity extends MyBaseActivity {
 
-    private PowerManager.WakeLock _wakeLock;
-    private PubnubChessView _view;
-    private PubnubConfimDialog _dlgConfirm;
-    private TextView _tvHeader;
-    private ViewAnimator _viewAnimatorMain;
+    public static final int SUBSCRIBE_TASK = 1;
+    public static final int STATUS_FINISH = 200;
+    public static final String PARAM_PINTENT = "pendingIntent";
+    public static final String PARAM_RESULT = "result";
+    private static final String LOG_TAG = "PUBNUB";
 
+    private PubnubChessView view;
     private Intent intent;
     private boolean bound = false;
     private PubnubService pubnubService;
-    public static final int SUBSCRIBE_TASK = 1;
-    public static final String PARAM_PINTENT = "pendingIntent";
-    public static final int STATUS_START = 100;
-    public static final int STATUS_FINISH = 200;
-    public final static String PARAM_RESULT = "result";
-    static boolean isActive = false;
-
     private String opponentName = null;
     private String myName = null;
-
-    protected static final int VIEW_MAIN_BOARD = 0;
-
-    private static final String LOG_TAG = "PUBNUB";
+    static boolean isActive = false; // used in PubnubService to understand is PubnubChessActivity active now or not
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         intent = new Intent(this, PubnubService.class);
-
         SharedPreferences prefs = getSharedPreferences("ChessPlayer", MODE_PRIVATE);
         if (prefs.getBoolean("fullScreen", true)) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -66,31 +55,16 @@ public class PubnubChessActivity extends MyBaseActivity {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
         setContentView(R.layout.pubnub_chess);
-
-        PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-        _wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "DoNotDimScreen");
-
-        // needs to be called first because of chess statics init
-        _view = new PubnubChessView(this);
-        _view.init();
-
-        _dlgConfirm = new PubnubConfimDialog(this);
-
-        _tvHeader = (TextView) findViewById(R.id.TextViewHeader);
-
-        _viewAnimatorMain = (ViewAnimator) findViewById(R.id.ViewAnimatorMain);
-        _viewAnimatorMain.setOutAnimation(this, R.anim.slide_left);
-        _viewAnimatorMain.setInAnimation(this, R.anim.slide_right);
-
-        switchToBoardView();
-
+        view = new PubnubChessView(this);
+        view.init();
         Log.i(LOG_TAG, "onCreate");
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        _view.setConfirmMove(true);
+        view.setConfirmMove(true);
+        // bind to PubnubService on start
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         isActive = true;
     }
@@ -98,20 +72,28 @@ public class PubnubChessActivity extends MyBaseActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        isActive = false;
+        // sending {status: 'waiting'} to pubnub channel when activity stopped
+        setPubnubStateWaiting();
+        // unbind from PubnubService if we bound when activity stopped
         if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
-        isActive = false;
-        setPubnubStateWaiting();
     }
 
+    /**
+     * This method will be called when PubnubService will send the information to this Activity.
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(LOG_TAG, "requestCode = " + requestCode + ", resultCode = " + resultCode);
         if (requestCode == SUBSCRIBE_TASK && resultCode == STATUS_FINISH) {
             String result = data.getStringExtra(PARAM_RESULT);
-            parsePubnubJson(result);
+            parsePubnubJson(result); // parse received data
         }
     }
 
@@ -124,17 +106,10 @@ public class PubnubChessActivity extends MyBaseActivity {
             PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
             Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
             startService(intent);
-            opponentName = getIntent().getStringExtra("uuid");
             myName = pubnubService.getUUID();
-            String gameCreate = getIntent().getStringExtra("game_create");
+            String gameCreate = getIntent().getStringExtra("gameCreate");
             if (!TextUtils.isEmpty(gameCreate)) {
                 parsePubnubJson(gameCreate);
-            } else {
-                gameCreate = "{ game : 'create',  initiator : '" + myName + "', acceptor: '" + opponentName + "' }";
-                get_view().setOpponent(opponentName);
-                get_view().startGame(true);
-                get_view().setMe(myName);
-                if(setPubnubStatePlaying()) pubnubService.publishToPubnubChannel(gameCreate);
             }
         }
 
@@ -147,82 +122,59 @@ public class PubnubChessActivity extends MyBaseActivity {
 
     private void parsePubnubJson(String line) {
         Log.d(LOG_TAG, "Parse message from pubnub channel: " + line);
-        String game = null;
-        JSONObject jsonObject = null;
+        String game;
+        JSONObject jsonObject;
         try {
             jsonObject = new JSONObject(line);
             game = jsonObject.getString("game");
-            if (null != game && game.equalsIgnoreCase("continue")) {
-                String move = null;
-                String sender = jsonObject.getString("user");
-                if(sender.equalsIgnoreCase(opponentName)){
-                    move = jsonObject.getString("move");
-                    get_view().paintMove(move);
-                }else{
-                    Log.d(LOG_TAG, "Hey, that's my move. Just ignore it.");
-                }
-            }else if (null != game && game.equalsIgnoreCase("create")) {
-                String initiator = jsonObject.getString("initiator");
-                String acceptor = jsonObject.getString("acceptor");
-                get_view().setMe(myName);
-                if(acceptor.equalsIgnoreCase(myName)){
-                    opponentName = initiator;
-                    get_view().setOpponent(opponentName);
-                    get_view().setMe(myName);
-                    get_view().startGame(false);
-                    setPubnubStatePlaying();
-                }
-                /*if(!TextUtils.isEmpty(acceptor) && !acceptor.equalsIgnoreCase(myName)){
-                    opponentName = acceptor;
-                    get_view().setOpponent(opponentName);
-                    get_view().startGame(true);
-                }else if(!TextUtils.isEmpty(initiator) && !initiator.equalsIgnoreCase(myName)){
-                    opponentName = initiator;
-                    get_view().setOpponent(opponentName);
-                    get_view().startGame(false);
-                    pubnubService.publishToPubnubChannel( "{ game : 'create', initiator: '" + opponentName + "', acceptor : '" + myName + "'}");
-                    setPubnubStatePlaying();
-                }*/
-            }else if (null != game && game.equalsIgnoreCase("end")) {
-                if(jsonObject.getString("winner").equalsIgnoreCase(myName)){
-                    JSONObject jsonPGN = jsonObject.getJSONObject("result");
-                    String pgn = fromJsonToPGN(jsonPGN);
-                    new AlertDialog.Builder(this)
-                            .setTitle("Congrats, you win!")
-                            .setMessage("Game PGN:")
-                            .setMessage(pgn)
-                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    // do nothing
-                                }
-                            })
-                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    // do nothing
-                                }
-                            })
-                            .setIcon(android.R.drawable.ic_dialog_alert)
-                            .show();
+            if(null != game){
+                GameType gameType = GameType.getType(game);
+                switch(gameType){
+                    case CONTINUE:
+                        String move;
+                        String sender = jsonObject.getString("user");
+                        if(sender.equalsIgnoreCase(opponentName)){ // paint move only if this my opponents move
+                            move = jsonObject.getString("move");
+                            view.paintMove(move);
+                        }
+                        break;
+                    case CREATE:
+                        String initiator = jsonObject.getString("initiator");
+                        String acceptor = jsonObject.getString("acceptor");
+                        view.setMe(myName);
+                        if(initiator.equalsIgnoreCase(myName)){ // accept game challenge
+                            opponentName = acceptor;
+                            view.setOpponent(opponentName);
+                            view.startGame(true);
+                            pubnubService.publishToPubnubChannel(line);
+                            setPubnubStatePlaying();
+                        }else if(acceptor.equalsIgnoreCase(myName)){
+                            opponentName = initiator;
+                            view.setOpponent(opponentName);
+                            view.startGame(false);
+                            setPubnubStatePlaying();
+                        }
+                        break;
+                    case END:
+                        if(jsonObject.getString("winner").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
+                            JSONObject jsonPGN = jsonObject.getJSONObject("result");
+                            String pgn = fromJsonToPGN(jsonPGN);
+                            showWinnerDialog(pgn);
+                        }
+                        break;
+                    default:
+                        break;
                 }
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + e.toString());
         }
-    }
-
-    public void switchToBoardView() {
-        if (_viewAnimatorMain.getDisplayedChild() != VIEW_MAIN_BOARD)
-            _viewAnimatorMain.setDisplayedChild(VIEW_MAIN_BOARD);
     }
 
     public void sendString(String s) {
         if (!TextUtils.isEmpty(s)) {
             pubnubService.publishToPubnubChannel(s);
         }
-    }
-
-    public PubnubChessView get_view() {
-        return _view;
     }
 
     private boolean setPubnubStatePlaying(){
@@ -249,6 +201,26 @@ public class PubnubChessActivity extends MyBaseActivity {
         return true;
     }
 
+    private void showWinnerDialog(String pgnResult){
+        new AlertDialog.Builder(this)
+                .setTitle("Congrats, you win!")
+                .setMessage("Game PGN:")
+                .setMessage(pgnResult)
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                    }
+                })
+                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
+
+
     private String fromJsonToPGN(JSONObject json) throws JSONException {
         String result = "";
         String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
@@ -271,6 +243,34 @@ public class PubnubChessActivity extends MyBaseActivity {
         }
         result += "\n";
         return result;
+    }
+
+}
+
+enum GameType {
+
+    CONTINUE("continue"),
+    CREATE("create"),
+    END("end"),
+    UNKNOWN("unknown");
+
+    private String typeValue;
+
+    GameType(String type){
+        this.typeValue = type;
+    }
+
+    static public GameType getType(String pType) {
+        for (GameType type: GameType.values()) {
+            if (type.getTypeValue().equalsIgnoreCase(pType)) {
+                return type;
+            }
+        }
+        return UNKNOWN;
+    }
+
+    public String getTypeValue() {
+        return typeValue;
     }
 
 }

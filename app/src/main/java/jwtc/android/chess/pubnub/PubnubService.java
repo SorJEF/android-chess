@@ -172,9 +172,11 @@ public class PubnubService extends Service {
                         Log.d("PUBNUB", "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
                     }
                 } else {
+                    //String gameCreate = "{ game : 'create',  initiator : '', acceptor: '" + getUUID() + "' }";
                     Intent myIntent = new Intent(PubnubService.this, PubnubChessActivity.class);
                     myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    myIntent.putExtra("game_create", message.toString());
+                    //myIntent.putExtra("game_create", message.toString());
+                    myIntent.putExtra("gameCreate", message.toString());
                     startActivity(myIntent);
                 }
             }

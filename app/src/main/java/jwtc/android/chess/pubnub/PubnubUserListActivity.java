@@ -72,9 +72,11 @@ public class PubnubUserListActivity extends ListActivity {
     public void onUserItemPlayBtnClick(View v){
         RelativeLayout vwParentRow = (RelativeLayout)v.getParent();
         TextView child = (TextView)vwParentRow.getChildAt(0);
-        String uuid = child.getText().toString();
+        String acceptor = child.getText().toString();
+        String initiator = getIntent().getStringExtra("uuid");
+        String gameCreate = "{ game : 'create',  initiator : '" + initiator + "', acceptor: '" + acceptor + "' }";
         Intent i = new Intent();
-        i.putExtra("uuid", uuid);
+        i.putExtra("gameCreate", gameCreate);
         i.setClass(PubnubUserListActivity.this, PubnubChessActivity.class);
         startActivity(i);
     }
