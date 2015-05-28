@@ -388,8 +388,11 @@ public class PubnubChessView extends ChessViewBase {
                 }
             }
             JSONArray moves = new JSONArray();
-            for (int i = 0; i < _arrPGN.size(); i++) {
-                moves.put(_arrPGN.get(i)._sMove);
+            for (int i = 0; i < _arrPGN.size(); i=i+2) {
+                JSONArray tmp = new JSONArray();
+                tmp.put(_arrPGN.get(i)._sMove);
+                if(i+1 < _arrPGN.size()){ tmp.put(_arrPGN.get(i+1)._sMove);}
+                moves.put(tmp);
             }
             result.put("moves", moves);
             pgn.put("result", result);

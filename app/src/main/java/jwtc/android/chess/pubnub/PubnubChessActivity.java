@@ -248,16 +248,16 @@ public class PubnubChessActivity extends MyBaseActivity {
             }
         }
         JSONArray jsonArray = json.getJSONArray("moves");
-        int moveNum = 1;
-        result += "\n";
-        for (int i = 0; i < jsonArray.length(); i = i + 2) {
-            result += moveNum + "." + jsonArray.get(i) + " ";
-            if(i+1 < jsonArray.length()){
-                result += jsonArray.get(i + 1) + " ";
+        for (int i = 0; i < jsonArray.length(); i++) {
+            JSONArray move;
+            try {
+                move = jsonArray.getJSONArray(i);
+                result += (i+1) + "." + move.get(0) + " ";
+                result += move.get(1) + " ";
+            } catch (JSONException e) {
+                continue;
             }
-            moveNum++;
         }
-        result += "\n";
         return result;
     }
 

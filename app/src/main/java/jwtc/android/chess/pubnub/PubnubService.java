@@ -132,6 +132,30 @@ public class PubnubService extends Service {
         }).start();
     }
 
+    void pubnubPresence() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (null == pendingIntent) {
+                    try {
+                        Thread.sleep(100);
+                        Log.d(LOG_TAG, "Sleep");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                try {
+                    pendingIntent.send(PubnubUserListActivity.STATUS_START);
+                    pubnub.presence(CHANNEL, getPubnubPresenceCallback());
+                } catch (PubnubException e) {
+                    e.printStackTrace();
+                } catch (PendingIntent.CanceledException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
     String getUUID() {
         return pubnub.getUUID();
     }
@@ -166,6 +190,44 @@ public class PubnubService extends Service {
             Log.d("PUBNUB", "JSON PARSE ERROR: " + e.toString());
         }
         return users;
+    }
+
+    private Callback getPubnubPresenceCallback() {
+        Callback callback = new Callback() {
+
+            @Override
+            public void connectCallback(String channel, Object message) {
+                Log.d("PUBNUB","CONNECT on channel:" + channel
+                        + " : " + message.getClass() + " : "
+                        + message.toString());
+            }
+
+            @Override
+            public void disconnectCallback(String channel, Object message) {
+                Log.d("PUBNUB","DISCONNECT on channel:" + channel
+                        + " : " + message.getClass() + " : "
+                        + message.toString());
+            }
+
+            public void reconnectCallback(String channel, Object message) {
+                Log.d("PUBNUB","RECONNECT on channel:" + channel
+                        + " : " + message.getClass() + " : "
+                        + message.toString());
+            }
+
+            @Override
+            public void successCallback(String channel, Object message) {
+                Log.d("PUBNUB",channel + " : "
+                        + message.getClass() + " : " + message.toString());
+            }
+
+            @Override
+            public void errorCallback(String channel, PubnubError error) {
+                Log.d("PUBNUB","ERROR on channel " + channel
+                        + " : " + error.toString());
+            }
+        };
+        return callback;
     }
 
     private Callback getPubnubSubscribeCallback(){

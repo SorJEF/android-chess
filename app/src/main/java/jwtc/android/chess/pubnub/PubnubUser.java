@@ -18,17 +18,14 @@ public class PubnubUser implements Parcelable{
 
     public static final Creator<PubnubUser> CREATOR =
             new Creator<PubnubUser>() {
-
                 @Override
                 public PubnubUser createFromParcel(Parcel source) {
                     return new PubnubUser(source);
                 }
-
                 @Override
                 public PubnubUser[] newArray(int size) {
                     return new PubnubUser[size];
                 }
-
             };
 
     @Override
