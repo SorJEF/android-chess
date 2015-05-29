@@ -61,7 +61,7 @@ public class PubnubChessActivity extends MyBaseActivity {
     @Override
     protected void onStart() {
         super.onStart();
-
+        Log.i(LOG_TAG, "onStart");
         PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
         Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
         startService(intent);
@@ -75,6 +75,7 @@ public class PubnubChessActivity extends MyBaseActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        Log.i(LOG_TAG, "onStop");
         isActive = false;
         // sending {status: 'waiting'} to pubnub channel when activity stopped
         setPubnubStateWaiting();
@@ -82,6 +83,7 @@ public class PubnubChessActivity extends MyBaseActivity {
         if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
+        isGameCreated = false;
     }
 
     /**
@@ -163,6 +165,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                             JSONObject resultPGN = jsonObject.getJSONObject("result");
                             String pgn = fromJsonToPGN(resultPGN);
                             showWinnerDialog(pgn);
+                            isGameCreated = false;
                         }
                         break;
                     default:
