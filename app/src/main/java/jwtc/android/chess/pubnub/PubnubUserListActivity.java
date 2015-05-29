@@ -21,20 +21,17 @@ public class PubnubUserListActivity extends ListActivity {
     private static final String LOG_TAG = "PUBNUB";
 
     public static final String PARAM_PINTENT = "pendingUserListIntent";
-    public static final int STATUS_START = 100;
-    public static final int STATUS_FINISH = 200;
+    public static final int STATUS_FINISH = 100;
     public final static String PARAM_RESULT = "userListResult";
     public static final int USER_LIST_TASK = 1;
     static boolean isActive = false; // used in PubnubService to understand is PubnubUserListActivity active now or not
     private String myName;
 
-    private Intent intent;
     private boolean bound = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        intent = new Intent(this, PubnubService.class);
         myName = getIntent().getStringExtra("myName");
         Toast.makeText(PubnubUserListActivity.this, "Download user list", Toast.LENGTH_SHORT).show();
     }
@@ -54,23 +51,20 @@ public class PubnubUserListActivity extends ListActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        PendingIntent pendingIntent = createPendingResult(USER_LIST_TASK, new Intent(), 0);
+        Intent intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
+        startService(intent);
         myName = getIntent().getStringExtra("myName");
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         isActive = true;
+        if(bound) return;
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        bound = true;
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         isActive = false;
-        if(!bound) return;
-        unbindService(serviceConnection);
-        bound = false;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onStop();
         if(!bound) return;
         unbindService(serviceConnection);
         bound = false;
@@ -95,9 +89,6 @@ public class PubnubUserListActivity extends ListActivity {
             Log.d(LOG_TAG, "PubnubUserListActivity connected to Service.");
             PubnubService pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
             bound = true;
-            PendingIntent pendingIntent = createPendingResult(USER_LIST_TASK, new Intent(), 0);
-            Intent intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
-            startService(intent);
             pubnubService.pubnubHereNow();
             pubnubService.subscribeToPubnubChannel();
             pubnubService.pubnubPresence();

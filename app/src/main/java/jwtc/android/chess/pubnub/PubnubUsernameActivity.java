@@ -46,7 +46,6 @@ public class PubnubUsernameActivity extends Activity {
             Toast.makeText(getApplicationContext(), "Enter your username, please.", Toast.LENGTH_SHORT).show();
         } else {
             if (!bound) return;
-            startService(intent);
             JSONObject state = getJsonStateWaitingObject();
             if (null == state) return;
             pubnubService.setPubnubState(username, state);
@@ -57,6 +56,7 @@ public class PubnubUsernameActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
+        startService(intent);
         if (bound) return;
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
@@ -64,14 +64,6 @@ public class PubnubUsernameActivity extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (!bound) return;
-        unbindService(serviceConnection);
-        bound = false;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
         if (!bound) return;
         unbindService(serviceConnection);
         bound = false;

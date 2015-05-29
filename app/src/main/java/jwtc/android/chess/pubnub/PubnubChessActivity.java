@@ -25,14 +25,13 @@ import jwtc.android.chess.R;
 
 public class PubnubChessActivity extends MyBaseActivity {
 
-    public static final int SUBSCRIBE_TASK = 1;
+    public static final int SUBSCRIBE_TASK = 2;
     public static final int STATUS_FINISH = 200;
     public static final String PARAM_PINTENT = "pendingChessIntent";
     public static final String PARAM_RESULT = "result";
     private static final String LOG_TAG = "PUBNUB";
 
     private PubnubChessView view;
-    private Intent intent;
     private boolean bound = false;
     private PubnubService pubnubService;
     private String opponentName = null;
@@ -45,7 +44,6 @@ public class PubnubChessActivity extends MyBaseActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        intent = new Intent(this, PubnubService.class);
         SharedPreferences prefs = getSharedPreferences("ChessPlayer", MODE_PRIVATE);
         if (prefs.getBoolean("fullScreen", true)) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -63,10 +61,15 @@ public class PubnubChessActivity extends MyBaseActivity {
     @Override
     protected void onStart() {
         super.onStart();
+
+        PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
+        Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
+        startService(intent);
         view.setConfirmMove(true);
+        isActive = true;
+        if (bound) return;
         // bind to PubnubService on start
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-        isActive = true;
     }
 
     @Override
@@ -100,9 +103,6 @@ public class PubnubChessActivity extends MyBaseActivity {
             Log.d(LOG_TAG, "PubnubChessActivity connected to Service.");
             pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
             bound = true;
-            PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
-            Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
-            startService(intent);
             myName = pubnubService.getUUID();
             String gameCreate = getIntent().getStringExtra("gameCreate");
             if (!TextUtils.isEmpty(gameCreate)) {
