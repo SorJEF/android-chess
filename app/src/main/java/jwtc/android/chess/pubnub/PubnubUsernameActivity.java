@@ -10,9 +10,7 @@ import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -23,8 +21,6 @@ import jwtc.android.chess.R;
 public class PubnubUsernameActivity extends Activity {
 
     private EditText usernameField;
-    private Button submitBtn;
-    private TextView tvInfo;
 
     private static final String LOG_TAG = "PUBNUB";
 
@@ -34,8 +30,6 @@ public class PubnubUsernameActivity extends Activity {
 
     private void findAllViewId() {
         usernameField = (EditText) findViewById(R.id.pubnubUsernameField);
-        submitBtn = (Button) findViewById(R.id.pubnubSubmitBtn);
-        tvInfo = (TextView) findViewById(R.id.tvPubnubInfo);
     }
 
     @Override
@@ -53,7 +47,7 @@ public class PubnubUsernameActivity extends Activity {
         } else {
             if (!bound) return;
             startService(intent);
-            JSONObject state = getJsonStateObject();
+            JSONObject state = getJsonStateWaitingObject();
             if (null == state) return;
             pubnubService.setPubnubState(username, state);
             startUserListActivity(username);
@@ -90,7 +84,6 @@ public class PubnubUsernameActivity extends Activity {
             pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
             bound = true;
         }
-
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             Log.d(LOG_TAG, "PubnubUsernameActivity disconnected from Service.");
@@ -106,7 +99,7 @@ public class PubnubUsernameActivity extends Activity {
         startActivity(intent);
     }
 
-    private JSONObject getJsonStateObject() {
+    private JSONObject getJsonStateWaitingObject() {
         JSONObject state = new JSONObject();
         try {
             state.put("status", "waiting");

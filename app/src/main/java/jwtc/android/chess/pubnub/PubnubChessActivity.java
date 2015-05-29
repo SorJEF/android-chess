@@ -11,13 +11,10 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.TextView;
-import android.widget.ViewAnimator;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -86,9 +83,6 @@ public class PubnubChessActivity extends MyBaseActivity {
 
     /**
      * This method will be called when PubnubService will send the information to this Activity.
-     * @param requestCode
-     * @param resultCode
-     * @param data
      */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -176,16 +170,9 @@ public class PubnubChessActivity extends MyBaseActivity {
                 }
             }
         } catch (JSONException e) {
-
             Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + e.toString());
         }
     }
-
-    /*public void sendString(String s) {
-        if (!TextUtils.isEmpty(s)) {
-            pubnubService.publishToPubnubChannel(s);
-        }
-    }*/
 
     public void sendJsonToPubnub(JSONObject o) {
         if (null != o) {
@@ -240,11 +227,11 @@ public class PubnubChessActivity extends MyBaseActivity {
     private String fromJsonToPGN(JSONObject json) throws JSONException {
         String result = "";
         String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
-        for (int i = 0; i < arrHead.length; i++) {
+        for (String anArrHead : arrHead) {
             try {
-                result += "[" + arrHead[i] + " \"" + json.getString(arrHead[i]) + "\"]\n";
+                result += "[" + anArrHead + " \"" + json.getString(anArrHead) + "\"]\n";
             } catch (JSONException e) {
-                continue;
+                // do nothing
             }
         }
         JSONArray jsonArray = json.getJSONArray("moves");
@@ -255,7 +242,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                 result += (i+1) + "." + move.get(0) + " ";
                 result += move.get(1) + " ";
             } catch (JSONException e) {
-                continue;
+                // do nothing
             }
         }
         return result;

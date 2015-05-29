@@ -23,12 +23,11 @@ public class PubnubUserListActivity extends ListActivity {
     public static final String PARAM_PINTENT = "pendingUserListIntent";
     public static final int STATUS_START = 100;
     public static final int STATUS_FINISH = 200;
-    public final static String PARAM_RESULT = "result";
+    public final static String PARAM_RESULT = "userListResult";
     public static final int USER_LIST_TASK = 1;
     static boolean isActive = false; // used in PubnubService to understand is PubnubUserListActivity active now or not
     private String myName;
 
-    private PubnubService pubnubService;
     private Intent intent;
     private boolean bound = false;
 
@@ -94,7 +93,7 @@ public class PubnubUserListActivity extends ListActivity {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             Log.d(LOG_TAG, "PubnubUserListActivity connected to Service.");
-            pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
+            PubnubService pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
             bound = true;
             PendingIntent pendingIntent = createPendingResult(USER_LIST_TASK, new Intent(), 0);
             Intent intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
