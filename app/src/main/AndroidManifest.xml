@@ -109,22 +109,25 @@
 				<data android:mimeType="application/x-chess-pgn" />
 			</intent-filter>
 		</activity>
-		<activity android:name="jwtc.android.chess.pubnub.PubnubUsernameActivity" android:label="@string/app_name_pubnub">
+		<activity android:name="jwtc.android.chess.pubnub.PubnubUsernameActivity"
+			android:label="@string/app_name_pubnub">
 			<intent-filter>
 				<action android:name="android.intent.action.VIEW" />
 			</intent-filter>
 		</activity>
-		<activity android:name="jwtc.android.chess.pubnub.PubnubUserListActivity" android:label="@string/app_name_pubnub_users">
+		<activity android:name="jwtc.android.chess.pubnub.PubnubUserListActivity"
+			android:label="@string/app_name_pubnub_users">
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+			</intent-filter>
+		</activity>
+		<activity android:name=".pubnub.PubnubChessActivity"
+			android:label="@string/app_name_playonline">
 			<intent-filter>
 				<action android:name="android.intent.action.VIEW" />
 			</intent-filter>
 		</activity>
 		<service android:name=".pubnub.PubnubService"/>
-		<activity android:name=".pubnub.PubnubChessActivity" android:label="@string/app_name_playonline">
-			<intent-filter>
-				<action android:name="android.intent.action.VIEW" />
-			</intent-filter>
-		</activity>
 	</application>
 	<supports-screens
 		android:largeScreens="true"

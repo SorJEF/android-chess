@@ -24,7 +24,7 @@
     <string name="start_globalpreferences">Preferences</string>
     <string name="start_exit">Exit</string>
     <string name="start_convergence">TV Screen</string>
-    <string name="start_pubnub">Play PB</string>
+    <string name="start_pubnub">Play with PubNub</string>
 
     <string name="pubnub_submit">Next</string>
     <string name="pubnub_username">Username</string>

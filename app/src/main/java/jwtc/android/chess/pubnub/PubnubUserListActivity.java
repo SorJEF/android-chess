@@ -26,8 +26,10 @@ public class PubnubUserListActivity extends ListActivity {
     public static final int USER_LIST_TASK = 1;
     static boolean isActive = false; // used in PubnubService to understand is PubnubUserListActivity active now or not
     private String myName;
+    private PubnubService pubnubService;
 
     private boolean bound = false;
+    static boolean isUserListWasBuild = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +53,7 @@ public class PubnubUserListActivity extends ListActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        Log.d(LOG_TAG, "PubnubUserListActivity.onStart()");
         PendingIntent pendingIntent = createPendingResult(USER_LIST_TASK, new Intent(), 0);
         Intent intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
         startService(intent);
@@ -64,7 +67,15 @@ public class PubnubUserListActivity extends ListActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        Log.d(LOG_TAG, "PubnubUserListActivity.onStop()");
         isActive = false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(LOG_TAG, "PubnubUserListActivity.onDestroy()");
+        pubnubService.unsubscribeFromPubnubChannel();
         if(!bound) return;
         unbindService(serviceConnection);
         bound = false;
@@ -83,15 +94,25 @@ public class PubnubUserListActivity extends ListActivity {
         startActivity(i);
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Log.d(LOG_TAG, "PubnubUserListActivity.onBackPressed()");
+        pubnubService.unsubscribeFromPubnubChannel();
+    }
+
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             Log.d(LOG_TAG, "PubnubUserListActivity connected to Service.");
-            PubnubService pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
+            pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
             bound = true;
-            pubnubService.pubnubHereNow();
             pubnubService.subscribeToPubnubChannel();
-            pubnubService.pubnubPresence();
+            if(!isUserListWasBuild){
+                pubnubService.pubnubHereNow();
+                pubnubService.pubnubPresence();
+                isUserListWasBuild = true;
+            }
         }
 
         @Override

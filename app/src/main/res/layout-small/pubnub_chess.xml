@@ -83,30 +83,21 @@
                 android:layout_marginTop="2dip"
                 >
                 <TableLayout android:id="@+id/TableICSPlayButtons"
-                    android:layout_width="fill_parent" android:layout_height="wrap_content"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
                     android:layout_alignParentRight="true"
                     android:stretchColumns="0"
                     >
-                    <TableRow>
-                        <EditText android:id="@+id/EditICSBoard"
-                            android:layout_width="fill_parent" android:layout_height="wrap_content"
-                            android:text=""
-                            />
-                        <ImageButton android:id="@+id/ButtonICSQuickCmd" android:src="@drawable/collections_view_as_list"
-                            android:layout_width="40dip" android:layout_height="40dip" android:scaleType="fitXY"
-                            />
-                        <ImageButton android:id="@+id/ButtonICSChat" android:src="@drawable/social_chat"
-                            android:layout_width="40dip" android:layout_height="40dip" android:scaleType="fitXY"
-                            />
-                    </TableRow>
                 </TableLayout>
                 <!-- ############### -->
-                <ViewSwitcher android:id="@+id/ViewSitcherConfirmAndText"
+                <ViewSwitcher android:id="@+id/ViewSwitcherConfirmAndText"
                     android:layout_width="fill_parent" android:layout_height="fill_parent"
                     android:layout_below="@id/TableICSPlayButtons"
                     >
-                    <TextView android:text="Welcome to ICS, press menu to continue" android:id="@+id/TextViewICSPlayConsole"
-                        android:layout_width="fill_parent" android:layout_height="wrap_content"
+                    <TextView android:text="Welcome to PubNub Chess"
+                        android:id="@+id/TextViewICSPlayConsole"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
                         style="@style/MyTextStyle"
                         />
                     <TableLayout android:layout_width="fill_parent" android:layout_height="fill_parent"

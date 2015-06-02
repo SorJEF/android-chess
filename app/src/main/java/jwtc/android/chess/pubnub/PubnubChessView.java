@@ -118,7 +118,7 @@ public class PubnubChessView extends ChessViewBase {
             }
         });
 
-        viewSwitchConfirm = (ViewSwitcher) _activity.findViewById(R.id.ViewSitcherConfirmAndText);
+        viewSwitchConfirm = (ViewSwitcher) _activity.findViewById(R.id.ViewSwitcherConfirmAndText);
 
         Timer timer = new Timer(true);
         timer.schedule(new TimerTask() {

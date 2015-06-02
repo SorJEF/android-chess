@@ -22,7 +22,7 @@
     <string name="start_globalpreferences">Preferenze</string>
     <string name="start_exit">Esci</string>
     <string name="start_convergence">Schermo TV</string>
-    <string name="start_pubnub">Gioca PB</string>
+    <string name="start_pubnub">Gioca PubNub</string>
 
     <string name="pubnub_usernameSubmit">Next</string>
 

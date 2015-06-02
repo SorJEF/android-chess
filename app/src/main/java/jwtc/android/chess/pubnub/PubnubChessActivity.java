@@ -55,13 +55,13 @@ public class PubnubChessActivity extends MyBaseActivity {
         setContentView(R.layout.pubnub_chess);
         view = new PubnubChessView(this);
         view.init();
-        Log.i(LOG_TAG, "onCreate");
+        Log.i(LOG_TAG, "PubnubChessActivity.onCreate()");
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        Log.i(LOG_TAG, "onStart");
+        Log.i(LOG_TAG, "PubnubChessActivity.onStart()");
         PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
         Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
         startService(intent);
@@ -75,15 +75,22 @@ public class PubnubChessActivity extends MyBaseActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        Log.i(LOG_TAG, "onStop");
+        Log.i(LOG_TAG, "PubnubChessActivity.onStop()");
         isActive = false;
         // sending {status: 'waiting'} to pubnub channel when activity stopped
         setPubnubStateWaiting();
+        isGameCreated = false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(LOG_TAG, "PubnubChessActivity.onDestroy()");
+        pubnubService.unsubscribeFromPubnubChannel();
         // unbind from PubnubService if we bound when activity stopped
         if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
-        isGameCreated = false;
     }
 
     /**
