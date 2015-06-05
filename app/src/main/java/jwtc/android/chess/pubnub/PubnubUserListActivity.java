@@ -55,10 +55,13 @@ public class PubnubUserListActivity extends ListActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(LOG_TAG, "UserListActivity.onCreate()");
         setContentView(R.layout.pubnub_list_view);
         myName = getIntent().getStringExtra("myName");
+        users = getIntent().getParcelableArrayListExtra("users");
+
         tvStatistics = (TextView) findViewById(R.id.tvStatistics);
-        users = new ArrayList<PubnubUser>();
+        //users = new ArrayList<PubnubUser>();
         adapter = new PubnubArrayAdapter(PubnubUserListActivity.this, users);
         adapter.setMyName(myName);
         setListAdapter(adapter);
@@ -70,13 +73,13 @@ public class PubnubUserListActivity extends ListActivity {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(LOG_TAG, "requestCode = " + requestCode + ", resultCode = " + resultCode);
         switch (requestCode) {
-            case HERE_NOW_TASK:
+            /*case HERE_NOW_TASK:
                 if(resultCode == HERE_NOW_CODE){
                     ArrayList<PubnubUser> hereNowUsers = data.getExtras().getParcelableArrayList(HERE_NOW_RESULT);
                     users.addAll(hereNowUsers);
                     adapter.notifyDataSetChanged();
                 }
-                break;
+                break;*/
             case PRESENCE_TASK:
                 switch (resultCode){
                     case PRESENCE_JOIN_CODE:
@@ -132,9 +135,9 @@ public class PubnubUserListActivity extends ListActivity {
         Log.d(LOG_TAG, "PubnubUserListActivity.onStart()");
         PendingIntent pendingIntent;
         Intent intent;
-        pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
+        /*pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
         intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(HERE_NOW_PINTENT, pendingIntent);
-        startService(intent);
+        startService(intent);*/
         pendingIntent = createPendingResult(PRESENCE_TASK, new Intent(), 0);
         intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PRESENCE_PINTENT, pendingIntent);
         startService(intent);
@@ -152,18 +155,17 @@ public class PubnubUserListActivity extends ListActivity {
     protected void onStop() {
         super.onStop();
         Log.d(LOG_TAG, "PubnubUserListActivity.onStop()");
-        users = new ArrayList<PubnubUser>();
         isActive = false;
+        pubnubService.unsubscribeFromPubnubChannel();
+        if (!bound) return;
+        unbindService(serviceConnection);
+        bound = false;
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "PubnubUserListActivity.onDestroy()");
-        pubnubService.unsubscribeFromPubnubChannel();
-        if (!bound) return;
-        unbindService(serviceConnection);
-        bound = false;
     }
 
     public void onUserItemPlayBtnClick(View v) {
@@ -179,12 +181,12 @@ public class PubnubUserListActivity extends ListActivity {
         startActivity(i);
     }
 
-    @Override
+/*    @Override
     public void onBackPressed() {
         super.onBackPressed();
         Log.d(LOG_TAG, "PubnubUserListActivity.onBackPressed()");
         pubnubService.unsubscribeFromPubnubChannel();
-    }
+    }*/
 
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override

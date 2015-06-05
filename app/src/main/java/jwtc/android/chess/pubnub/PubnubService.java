@@ -27,6 +27,7 @@ public class PubnubService extends Service {
     private final Pubnub pubnub = new Pubnub(PUBLISH_KEY, SUBSCRIBE_KEY, true);
    // private PendingIntent pendingChessIntent;
    // private PendingIntent pendingUserListIntent;
+    private boolean isPresenceMethodCalled = false;
 
     /**
      * Class for clients to access.  Because we know this service always
@@ -52,12 +53,17 @@ public class PubnubService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i("PubnubService", "Received start id " + startId + ": " + intent);
-        PendingIntent pendingUserListIntent = intent.getParcelableExtra(PubnubUserListActivity.HERE_NOW_PINTENT);
+        PendingIntent pendingUserNameIntent = intent.getParcelableExtra(PubnubUsernameActivity.HERE_NOW_PINTENT);
+        if(pendingUserNameIntent != null){
+            pubnubHereNow(pendingUserNameIntent);
+        }
+        /*PendingIntent pendingUserListIntent = intent.getParcelableExtra(PubnubUserListActivity.HERE_NOW_PINTENT);
         if(pendingUserListIntent != null){
             pubnubHereNow(pendingUserListIntent);
-        }
+        }*/
         PendingIntent pendingUserItemIntent = intent.getParcelableExtra(PubnubUserListActivity.PRESENCE_PINTENT);
-        if(pendingUserItemIntent != null){
+        if(pendingUserItemIntent != null && !isPresenceMethodCalled){
+            isPresenceMethodCalled = true;
             pubnubPresence(pendingUserItemIntent);
         }
         PendingIntent pendingUserStatisticsIntent = intent.getParcelableExtra(PubnubUserListActivity.SUBSCRIBE_PINTENT);
@@ -180,7 +186,7 @@ public class PubnubService extends Service {
                 try {
                     jsonUser = jsonArray.getJSONObject(i);
                     name = jsonUser.getString("uuid");
-                    if (name.equalsIgnoreCase("system_8648739c-b1da-4a4e-ab2c-f21a380896cf"))
+                        if (name.equalsIgnoreCase("system_8648739c-b1da-4a4e-ab2c-f21a380896cf") || name.equalsIgnoreCase(getUUID()))
                         continue;
                 } catch (JSONException e) {
                     continue;
@@ -212,6 +218,7 @@ public class PubnubService extends Service {
                     String action = response.getString("action");
                     if (action.equalsIgnoreCase("join")) {
                         String name = response.getString("uuid");
+                        if(name.equalsIgnoreCase(getUUID())) return;
                         pubnubUser.setName(name);
                         pubnubUser.setStatus("waiting");
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.PRESENCE_JOIN_RESULT, pubnubUser);
@@ -328,9 +335,9 @@ public class PubnubService extends Service {
             public void successCallback(String channel, Object response) {
                 Log.d(LOG_TAG, "HERE_NOW_RESPONSE" + response.toString());
                 ArrayList<PubnubUser> users = parseJsonHereNowResponse(response);
-                Intent intent = new Intent().putExtra(PubnubUserListActivity.HERE_NOW_RESULT, users);
+                Intent intent = new Intent().putExtra(PubnubUsernameActivity.HERE_NOW_RESULT, users);
                 try {
-                    pendingUserListIntent.send(PubnubService.this, PubnubUserListActivity.HERE_NOW_CODE, intent);
+                    pendingUserListIntent.send(PubnubService.this, PubnubUsernameActivity.HERE_NOW_CODE, intent);
                 } catch (PendingIntent.CanceledException e) {
                     Log.d(LOG_TAG, "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
                 }

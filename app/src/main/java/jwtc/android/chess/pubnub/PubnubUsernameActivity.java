@@ -1,6 +1,7 @@
 package jwtc.android.chess.pubnub;
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -16,6 +17,8 @@ import android.widget.Toast;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 import jwtc.android.chess.R;
 
 public class PubnubUsernameActivity extends Activity {
@@ -23,10 +26,15 @@ public class PubnubUsernameActivity extends Activity {
     private EditText usernameField;
 
     private static final String LOG_TAG = "PUBNUB";
+    public static final String HERE_NOW_PINTENT = "usernameHereNowIntent";
+    public static final int HERE_NOW_CODE = 99;
+    public final static String HERE_NOW_RESULT = "usernameHereNowResult";
+    public static final int HERE_NOW_TASK = 0;
 
     private PubnubService pubnubService;
     private Intent intent;
     private boolean bound = false;
+    private  ArrayList<PubnubUser> hereNowUsers;
 
     private void findAllViewId() {
         usernameField = (EditText) findViewById(R.id.pubnubUsernameField);
@@ -37,6 +45,7 @@ public class PubnubUsernameActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.pubnub_username);
         findAllViewId();
+        hereNowUsers = new ArrayList<PubnubUser>();
         intent = new Intent(this, PubnubService.class);
     }
 
@@ -46,6 +55,12 @@ public class PubnubUsernameActivity extends Activity {
             Toast.makeText(getApplicationContext(), "Enter your username, please.", Toast.LENGTH_SHORT).show();
         } else {
             if (!bound) return;
+            for(PubnubUser user: hereNowUsers){
+                if(user.getName().equalsIgnoreCase(username)){
+                    Toast.makeText(getApplicationContext(), "Sorry, this username is already taken. Choose another.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
             JSONObject state = getJsonStateWaitingObject();
             if (null == state) return;
             pubnubService.setPubnubState(username, state);
@@ -54,8 +69,21 @@ public class PubnubUsernameActivity extends Activity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == HERE_NOW_TASK && resultCode == HERE_NOW_CODE){
+            ArrayList<PubnubUser> users = data.getExtras().getParcelableArrayList(HERE_NOW_RESULT);
+            hereNowUsers = users;
+        }
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
+        PendingIntent pendingIntent;
+        Intent intent;
+        pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
+        intent = new Intent(PubnubUsernameActivity.this, PubnubService.class).putExtra(HERE_NOW_PINTENT, pendingIntent);
         startService(intent);
         if (bound) return;
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
@@ -84,10 +112,11 @@ public class PubnubUsernameActivity extends Activity {
     };
 
     private void startUserListActivity(String myName) {
-        Intent intent = new Intent(getApplicationContext(), PubnubUserListActivity.class);
+        Intent intent = new Intent(PubnubUsernameActivity.this, PubnubUserListActivity.class);
         Bundle b = new Bundle();
         b.putString("myName", myName);
         intent.putExtras(b);
+        intent.putParcelableArrayListExtra("users", hereNowUsers);
         startActivity(intent);
     }
 
