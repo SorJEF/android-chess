@@ -169,8 +169,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                         break;
                     case END:
                         if(gameId.equalsIgnoreCase(id) && jsonObject.getString("winner").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
-                            JSONObject resultPGN = jsonObject.getJSONObject("result");
-                            String pgn = fromJsonToPGN(resultPGN);
+                            String pgn = fromJsonToPGN(jsonObject);
                             showWinnerDialog(pgn);
                             isGameCreated = false;
                         }
@@ -239,7 +238,7 @@ public class PubnubChessActivity extends MyBaseActivity {
         String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
         for (String anArrHead : arrHead) {
             try {
-                result += "[" + anArrHead + " \"" + json.getString(anArrHead) + "\"]\n";
+                result += "[" + anArrHead + " \"" + json.getString(anArrHead.toLowerCase()) + "\"]\n";
             } catch (JSONException e) {
                 // do nothing
             }

@@ -58,7 +58,6 @@ public class PubnubUserListActivity extends ListActivity {
         setContentView(R.layout.pubnub_list_view);
         myName = getIntent().getStringExtra("myName");
         tvStatistics = (TextView) findViewById(R.id.tvStatistics);
-        tvStatistics.setText("This is your statistic: 'loser'.");
         users = new ArrayList<PubnubUser>();
         adapter = new PubnubArrayAdapter(PubnubUserListActivity.this, users);
         adapter.setMyName(myName);
