@@ -261,6 +261,18 @@ public class PubnubService extends Service {
                         startActivity(intent);
                     }
                 } catch (JSONException e) {
+                    try {
+                        JSONArray jsonArray = new JSONArray(message.toString());
+                        if(jsonArray.length() == 0){
+                            String statistics = "Here is your statistic, " + getUUID() + ".\nTotal: 0, Win: 0, Lose: 0, Draw: 0";
+                            Intent intent = new Intent().putExtra(PubnubUserListActivity.SUBSCRIBE_STATISTICS_RESULT, statistics);
+                            pendingIntent.send(PubnubService.this, PubnubUserListActivity.SUBSCRIBE_STATISTICS_CODE, intent);
+                        }
+                    } catch (JSONException e1) {
+                        e1.printStackTrace();
+                    } catch (PendingIntent.CanceledException e1) {
+                        e1.printStackTrace();
+                    }
                     Log.d(LOG_TAG, "PubnubService.pubnubSubscribe(). Can't send result to Activity: " + e.toString());
                 } catch (PendingIntent.CanceledException e) {
                     e.printStackTrace();
