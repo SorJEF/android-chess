@@ -25,10 +25,10 @@ import jwtc.android.chess.R;
 
 public class PubnubChessActivity extends MyBaseActivity {
 
-    public static final int SUBSCRIBE_TASK = 2;
+    public static final int SUBSCRIBE_CHESS_TASK = 4;
     public static final int STATUS_FINISH = 200;
-    public static final String PARAM_PINTENT = "pendingChessIntent";
-    public static final String PARAM_RESULT = "result";
+    public static final String CHESS_PINTENT = "pendingChessIntent";
+    public static final String CHESS_RESULT = "result";
     private static final String LOG_TAG = "PUBNUB";
 
     private PubnubChessView view;
@@ -62,8 +62,8 @@ public class PubnubChessActivity extends MyBaseActivity {
     protected void onStart() {
         super.onStart();
         Log.i(LOG_TAG, "PubnubChessActivity.onStart()");
-        PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_TASK, new Intent(), 0);
-        Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
+        PendingIntent pendingIntent = createPendingResult(SUBSCRIBE_CHESS_TASK, new Intent(), 0);
+        Intent intent = new Intent(PubnubChessActivity.this, PubnubService.class).putExtra(CHESS_PINTENT, pendingIntent);
         startService(intent);
         view.setConfirmMove(true);
         isActive = true;
@@ -100,8 +100,8 @@ public class PubnubChessActivity extends MyBaseActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(LOG_TAG, "requestCode = " + requestCode + ", resultCode = " + resultCode);
-        if (requestCode == SUBSCRIBE_TASK && resultCode == STATUS_FINISH) {
-            String result = data.getStringExtra(PARAM_RESULT);
+        if (requestCode == SUBSCRIBE_CHESS_TASK && resultCode == STATUS_FINISH) {
+            String result = data.getStringExtra(CHESS_RESULT);
             parsePubnubJson(result); // parse received data
         }
     }

@@ -17,24 +17,52 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import jwtc.android.chess.R;
+
 public class PubnubUserListActivity extends ListActivity {
     private static final String LOG_TAG = "PUBNUB";
 
-    public static final String PARAM_PINTENT = "pendingUserListIntent";
-    public static final int STATUS_FINISH = 100;
-    public final static String PARAM_RESULT = "userListResult";
-    public static final int USER_LIST_TASK = 1;
+    public static final String HERE_NOW_PINTENT = "hereNowIntent";
+    public static final String PRESENCE_PINTENT = "presenceIntent";
+    public static final String SUBSCRIBE_PINTENT = "subscribeIntent";
+
+    public static final int HERE_NOW_CODE = 100;
+    public static final int PRESENCE_JOIN_CODE = 101;
+    public static final int PRESENCE_STATE_CODE = 102;
+    public static final int PRESENCE_LEAVE_CODE = 103;
+    public static final int SUBSCRIBE_STATISTICS_CODE = 103;
+
+    public final static String HERE_NOW_RESULT = "hereNowResult";
+    public final static String PRESENCE_JOIN_RESULT = "presenceJoinResult";
+    public final static String PRESENCE_STATE_RESULT = "presenceStateResult";
+    public final static String PRESENCE_LEAVE_RESULT = "presenceLeaveResult";
+    public final static String SUBSCRIBE_STATISTICS_RESULT = "subscribeStatisticsResult";
+
+    public static final int HERE_NOW_TASK = 1;
+    public static final int PRESENCE_TASK = 2;
+    public static final int SUBSCRIBE_STATISTICS_TASK = 3;
+
     static boolean isActive = false; // used in PubnubService to understand is PubnubUserListActivity active now or not
     private String myName;
     private PubnubService pubnubService;
 
+    private TextView tvStatistics;
+    private ArrayList<PubnubUser> users;
+    private PubnubArrayAdapter adapter;
+
     private boolean bound = false;
-    static boolean isUserListWasBuild = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.pubnub_list_view);
         myName = getIntent().getStringExtra("myName");
+        tvStatistics = (TextView) findViewById(R.id.tvStatistics);
+        tvStatistics.setText("This is your statistic: 'loser'.");
+        users = new ArrayList<PubnubUser>();
+        adapter = new PubnubArrayAdapter(PubnubUserListActivity.this, users);
+        adapter.setMyName(myName);
+        setListAdapter(adapter);
         Toast.makeText(PubnubUserListActivity.this, "Download user list", Toast.LENGTH_SHORT).show();
     }
 
@@ -42,11 +70,60 @@ public class PubnubUserListActivity extends ListActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(LOG_TAG, "requestCode = " + requestCode + ", resultCode = " + resultCode);
-        if (resultCode == STATUS_FINISH && requestCode == USER_LIST_TASK) {
-            ArrayList<PubnubUser> users = data.getExtras().getParcelableArrayList(PARAM_RESULT);
-            PubnubArrayAdapter adapter = new PubnubArrayAdapter(PubnubUserListActivity.this, users);
-            adapter.setMyName(myName);
-            setListAdapter(adapter);
+        switch (requestCode) {
+            case HERE_NOW_TASK:
+                if(resultCode == HERE_NOW_CODE){
+                    ArrayList<PubnubUser> hereNowUsers = data.getExtras().getParcelableArrayList(HERE_NOW_RESULT);
+                    users.addAll(hereNowUsers);
+                    adapter.notifyDataSetChanged();
+                }
+                break;
+            case PRESENCE_TASK:
+                switch (resultCode){
+                    case PRESENCE_JOIN_CODE:
+                        PubnubUser joinedUser = data.getParcelableExtra(PRESENCE_JOIN_RESULT);
+                        if(null == joinedUser) break;
+                        if(users.isEmpty()) break;
+                        for(PubnubUser user: users){
+                            if(user.getName().equalsIgnoreCase(joinedUser.getName())){
+                                return;
+                            }
+                        }
+                        users.add(joinedUser);
+                        adapter.notifyDataSetChanged();
+                        break;
+                    case PRESENCE_STATE_CODE:
+                        PubnubUser stateChangedUser = data.getParcelableExtra(PRESENCE_STATE_RESULT);
+                        for(PubnubUser user: users){
+                            if(user.getName().equalsIgnoreCase(stateChangedUser.getName())){
+                                user.setStatus(stateChangedUser.getStatus());
+                                adapter.notifyDataSetChanged();
+                                break;
+                            }
+                        }
+                        break;
+                    case PRESENCE_LEAVE_CODE:
+                        String name = data.getStringExtra(PRESENCE_LEAVE_RESULT);
+                        for(PubnubUser user: users){
+                            if(user.getName().equalsIgnoreCase(name)){
+                                users.remove(user);
+                                adapter.notifyDataSetChanged();
+                                break;
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case SUBSCRIBE_STATISTICS_TASK:
+                if(resultCode == SUBSCRIBE_STATISTICS_CODE){
+                    String statistics = data.getStringExtra(SUBSCRIBE_STATISTICS_RESULT);
+                    tvStatistics.setText(statistics);
+                }
+                break;
+            default:
+                break;
         }
     }
 
@@ -54,12 +131,20 @@ public class PubnubUserListActivity extends ListActivity {
     protected void onStart() {
         super.onStart();
         Log.d(LOG_TAG, "PubnubUserListActivity.onStart()");
-        PendingIntent pendingIntent = createPendingResult(USER_LIST_TASK, new Intent(), 0);
-        Intent intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PARAM_PINTENT, pendingIntent);
+        PendingIntent pendingIntent;
+        Intent intent;
+        pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
+        intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(HERE_NOW_PINTENT, pendingIntent);
+        startService(intent);
+        pendingIntent = createPendingResult(PRESENCE_TASK, new Intent(), 0);
+        intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PRESENCE_PINTENT, pendingIntent);
+        startService(intent);
+        pendingIntent = createPendingResult(SUBSCRIBE_STATISTICS_TASK, new Intent(), 0);
+        intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(SUBSCRIBE_PINTENT, pendingIntent);
         startService(intent);
         myName = getIntent().getStringExtra("myName");
         isActive = true;
-        if(bound) return;
+        if (bound) return;
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         bound = true;
     }
@@ -68,6 +153,7 @@ public class PubnubUserListActivity extends ListActivity {
     protected void onStop() {
         super.onStop();
         Log.d(LOG_TAG, "PubnubUserListActivity.onStop()");
+        users = new ArrayList<PubnubUser>();
         isActive = false;
     }
 
@@ -76,15 +162,15 @@ public class PubnubUserListActivity extends ListActivity {
         super.onDestroy();
         Log.d(LOG_TAG, "PubnubUserListActivity.onDestroy()");
         pubnubService.unsubscribeFromPubnubChannel();
-        if(!bound) return;
+        if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
     }
 
-    public void onUserItemPlayBtnClick(View v){
+    public void onUserItemPlayBtnClick(View v) {
         isActive = false;
-        RelativeLayout vwParentRow = (RelativeLayout)v.getParent();
-        TextView child = (TextView)vwParentRow.getChildAt(0);
+        RelativeLayout vwParentRow = (RelativeLayout) v.getParent();
+        TextView child = (TextView) vwParentRow.getChildAt(0);
         String acceptor = child.getText().toString();
         String gameId = UUID.randomUUID().toString();
         String gameCreate = "{ game : 'create',  initiator : '" + myName + "', acceptor: '" + acceptor + "', gameId: '" + gameId + "' }";
@@ -107,12 +193,12 @@ public class PubnubUserListActivity extends ListActivity {
             Log.d(LOG_TAG, "PubnubUserListActivity connected to Service.");
             pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
             bound = true;
-            pubnubService.subscribeToPubnubChannel();
+            /*pubnubService.subscribeToPubnubChannel();
             if(!isUserListWasBuild){
                 pubnubService.pubnubHereNow();
                 pubnubService.pubnubPresence();
                 isUserListWasBuild = true;
-            }
+            }*/
         }
 
         @Override
