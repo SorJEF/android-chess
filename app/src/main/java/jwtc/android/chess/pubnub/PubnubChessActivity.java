@@ -235,10 +235,14 @@ public class PubnubChessActivity extends MyBaseActivity {
 
     private String fromJsonToPGN(JSONObject json) throws JSONException {
         String result = "";
-        String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
+        String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "gameResult", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
         for (String anArrHead : arrHead) {
             try {
-                result += "[" + anArrHead + " \"" + json.getString(anArrHead.toLowerCase()) + "\"]\n";
+                if(anArrHead.equalsIgnoreCase("gameResult")){
+                    result += "[Result \"" + json.getString(anArrHead) + "\"]\n";
+                }else{
+                    result += "[" + anArrHead + " \"" + json.getString(anArrHead.toLowerCase()) + "\"]\n";
+                }
             } catch (JSONException e) {
                 // do nothing
             }

@@ -333,11 +333,14 @@ public class PubnubChessView extends ChessViewBase {
     private JSONObject exportJsonPGN() {
         JSONObject pgn = new JSONObject();
         String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "Result", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
-        //JSONObject result = new JSONObject();
         try {
             for (String key : arrHead) {
                 if (mapPGNHead.containsKey(key)) {
-                    pgn.put(key.toLowerCase(), mapPGNHead.get(key));
+                    if(key.equalsIgnoreCase("Result")){
+                        pgn.put("gameResult", mapPGNHead.get(key));
+                    }else{
+                        pgn.put(key.toLowerCase(), mapPGNHead.get(key));
+                    }
                 }
             }
             JSONArray moves = new JSONArray();
