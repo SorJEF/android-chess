@@ -116,7 +116,7 @@ public class PubnubUsernameActivity extends Activity {
         Bundle b = new Bundle();
         b.putString("myName", myName);
         intent.putExtras(b);
-        intent.putParcelableArrayListExtra("users", hereNowUsers);
+        //intent.putParcelableArrayListExtra("users", hereNowUsers);
         startActivity(intent);
     }
 

@@ -22,25 +22,25 @@ import jwtc.android.chess.R;
 public class PubnubUserListActivity extends ListActivity {
     private static final String LOG_TAG = "PUBNUB";
 
-   // public static final String HERE_NOW_PINTENT = "hereNowIntent";
+    public static final String HERE_NOW_PINTENT = "userListHereNowIntent";
     public static final String PRESENCE_PINTENT = "presenceIntent";
     public static final String SUBSCRIBE_PINTENT = "subscribeIntent";
 
-   // public static final int HERE_NOW_CODE = 100;
-    public static final int PRESENCE_JOIN_CODE = 101;
-    public static final int PRESENCE_STATE_CODE = 102;
-    public static final int PRESENCE_LEAVE_CODE = 103;
-    public static final int SUBSCRIBE_STATISTICS_CODE = 104;
+    public static final int HERE_NOW_CODE = 101;
+    public static final int PRESENCE_JOIN_CODE = 102;
+    public static final int PRESENCE_STATE_CODE = 103;
+    public static final int PRESENCE_LEAVE_CODE = 104;
+    public static final int SUBSCRIBE_STATISTICS_CODE = 105;
 
-    //public final static String HERE_NOW_RESULT = "hereNowResult";
+    public final static String HERE_NOW_RESULT = "userListHereNowResult";
     public final static String PRESENCE_JOIN_RESULT = "presenceJoinResult";
     public final static String PRESENCE_STATE_RESULT = "presenceStateResult";
     public final static String PRESENCE_LEAVE_RESULT = "presenceLeaveResult";
     public final static String SUBSCRIBE_STATISTICS_RESULT = "subscribeStatisticsResult";
 
-    //public static final int HERE_NOW_TASK = 1;
-    public static final int PRESENCE_TASK = 2;
-    public static final int SUBSCRIBE_STATISTICS_TASK = 3;
+    public static final int HERE_NOW_TASK = 2;
+    public static final int PRESENCE_TASK = 3;
+    public static final int SUBSCRIBE_STATISTICS_TASK = 4;
 
     static boolean isActive = false; // used in PubnubService to understand is PubnubUserListActivity active now or not
     private String myName;
@@ -58,10 +58,8 @@ public class PubnubUserListActivity extends ListActivity {
         Log.d(LOG_TAG, "UserListActivity.onCreate()");
         setContentView(R.layout.pubnub_list_view);
         myName = getIntent().getStringExtra("myName");
-        users = getIntent().getParcelableArrayListExtra("users");
-
         tvStatistics = (TextView) findViewById(R.id.tvStatistics);
-        //users = new ArrayList<PubnubUser>();
+        users = new ArrayList<PubnubUser>();
         adapter = new PubnubArrayAdapter(PubnubUserListActivity.this, users);
         adapter.setMyName(myName);
         setListAdapter(adapter);
@@ -73,13 +71,15 @@ public class PubnubUserListActivity extends ListActivity {
         super.onActivityResult(requestCode, resultCode, data);
         Log.d(LOG_TAG, "requestCode = " + requestCode + ", resultCode = " + resultCode);
         switch (requestCode) {
-            /*case HERE_NOW_TASK:
+            case HERE_NOW_TASK:
                 if(resultCode == HERE_NOW_CODE){
                     ArrayList<PubnubUser> hereNowUsers = data.getExtras().getParcelableArrayList(HERE_NOW_RESULT);
+                    if(hereNowUsers == null || users == null) return;
+                    users.clear();
                     users.addAll(hereNowUsers);
                     adapter.notifyDataSetChanged();
                 }
-                break;*/
+                break;
             case PRESENCE_TASK:
                 switch (resultCode){
                     case PRESENCE_JOIN_CODE:
@@ -135,9 +135,9 @@ public class PubnubUserListActivity extends ListActivity {
         Log.d(LOG_TAG, "PubnubUserListActivity.onStart()");
         PendingIntent pendingIntent;
         Intent intent;
-        /*pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
+        pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
         intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(HERE_NOW_PINTENT, pendingIntent);
-        startService(intent);*/
+        startService(intent);
         pendingIntent = createPendingResult(PRESENCE_TASK, new Intent(), 0);
         intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PRESENCE_PINTENT, pendingIntent);
         startService(intent);
@@ -189,25 +189,12 @@ public class PubnubUserListActivity extends ListActivity {
         startActivity(i);
     }
 
-/*    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        Log.d(LOG_TAG, "PubnubUserListActivity.onBackPressed()");
-        pubnubService.unsubscribeFromPubnubChannel();
-    }*/
-
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             Log.d(LOG_TAG, "PubnubUserListActivity connected to Service.");
             pubnubService = ((PubnubService.LocalBinder) iBinder).getService();
             bound = true;
-            /*pubnubService.subscribeToPubnubChannel();
-            if(!isUserListWasBuild){
-                pubnubService.pubnubHereNow();
-                pubnubService.pubnubPresence();
-                isUserListWasBuild = true;
-            }*/
         }
 
         @Override

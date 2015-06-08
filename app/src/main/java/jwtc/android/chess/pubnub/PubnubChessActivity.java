@@ -25,7 +25,7 @@ import jwtc.android.chess.R;
 
 public class PubnubChessActivity extends MyBaseActivity {
 
-    public static final int SUBSCRIBE_CHESS_TASK = 4;
+    public static final int SUBSCRIBE_CHESS_TASK = 5;
     public static final int STATUS_FINISH = 200;
     public static final String CHESS_PINTENT = "pendingChessIntent";
     public static final String CHESS_RESULT = "chessResult";
@@ -73,12 +73,19 @@ public class PubnubChessActivity extends MyBaseActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        pubnubService.unsubscribeFromPubnubChannel();
+        setPubnubStateWaiting();
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         Log.i(LOG_TAG, "PubnubChessActivity.onStop()");
         isActive = false;
         // sending {status: 'waiting'} to pubnub channel when activity stopped
-        setPubnubStateWaiting();
+        // setPubnubStateWaiting();
         isGameCreated = false;
     }
 
@@ -86,7 +93,7 @@ public class PubnubChessActivity extends MyBaseActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "PubnubChessActivity.onDestroy()");
-        pubnubService.unsubscribeFromPubnubChannel();
+        //pubnubService.unsubscribeFromPubnubChannel();
         // unbind from PubnubService if we bound when activity stopped
         if (!bound) return;
         unbindService(serviceConnection);

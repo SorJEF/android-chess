@@ -50,7 +50,7 @@ public class PubnubArrayAdapter extends ArrayAdapter<PubnubUser>{
         Button playBtn = (Button) rowView.findViewById(R.id.pubnubPlayBtn);
         PubnubUser user = users.get(position);
         userName.setText(user.getName());
-        if(!user.getStatus().equals("waiting") || user.getName().equalsIgnoreCase(myName)){
+        if(!user.getStatus().equals("waiting")){
             playBtn.setVisibility(View.INVISIBLE);
         }
         return rowView;
