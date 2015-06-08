@@ -62,8 +62,7 @@ public class PubnubService extends Service {
             pubnubHereNow(pendingUserListIntent);
         }*/
         PendingIntent pendingUserItemIntent = intent.getParcelableExtra(PubnubUserListActivity.PRESENCE_PINTENT);
-        if(pendingUserItemIntent != null && !isPresenceMethodCalled){
-            isPresenceMethodCalled = true;
+        if(pendingUserItemIntent != null){
             pubnubPresence(pendingUserItemIntent);
         }
         PendingIntent pendingUserStatisticsIntent = intent.getParcelableExtra(PubnubUserListActivity.SUBSCRIBE_PINTENT);
@@ -72,7 +71,7 @@ public class PubnubService extends Service {
         }
         PendingIntent pendingChessIntent = intent.getParcelableExtra(PubnubChessActivity.CHESS_PINTENT);
         if(pendingChessIntent != null) {
-            unsubscribeFromPubnubChannel();
+            //unsubscribeFromPubnubChannel();
             subscribeToPubnubChannelForChess(pendingChessIntent);
         }
         // We want this service to continue running until it is explicitly
@@ -96,6 +95,16 @@ public class PubnubService extends Service {
             @Override
             public void run() {
                 pubnub.publish(CHANNEL, message, getPubnubPublishCallback());
+            }
+        }).start();
+    }
+
+    void unsubscribePresencePubnub(){
+        Log.d(LOG_TAG, "Presence unsubscribe.");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                pubnub.unsubscribePresence(CHANNEL);
             }
         }).start();
     }
@@ -262,6 +271,7 @@ public class PubnubService extends Service {
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.SUBSCRIBE_STATISTICS_RESULT, statistics);
                         pendingIntent.send(PubnubService.this, PubnubUserListActivity.SUBSCRIBE_STATISTICS_CODE, intent);
                     } else if (jsonObject.has("acceptor") && jsonObject.getString("acceptor").equalsIgnoreCase(getUUID())) {
+                        pubnub.unsubscribe(CHANNEL);
                         Intent intent = new Intent(PubnubService.this, PubnubChessActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         intent.putExtra("gameCreate", message.toString());

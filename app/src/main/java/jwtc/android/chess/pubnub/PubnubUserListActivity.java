@@ -22,23 +22,23 @@ import jwtc.android.chess.R;
 public class PubnubUserListActivity extends ListActivity {
     private static final String LOG_TAG = "PUBNUB";
 
-    public static final String HERE_NOW_PINTENT = "hereNowIntent";
+   // public static final String HERE_NOW_PINTENT = "hereNowIntent";
     public static final String PRESENCE_PINTENT = "presenceIntent";
     public static final String SUBSCRIBE_PINTENT = "subscribeIntent";
 
-    public static final int HERE_NOW_CODE = 100;
+   // public static final int HERE_NOW_CODE = 100;
     public static final int PRESENCE_JOIN_CODE = 101;
     public static final int PRESENCE_STATE_CODE = 102;
     public static final int PRESENCE_LEAVE_CODE = 103;
-    public static final int SUBSCRIBE_STATISTICS_CODE = 103;
+    public static final int SUBSCRIBE_STATISTICS_CODE = 104;
 
-    public final static String HERE_NOW_RESULT = "hereNowResult";
+    //public final static String HERE_NOW_RESULT = "hereNowResult";
     public final static String PRESENCE_JOIN_RESULT = "presenceJoinResult";
     public final static String PRESENCE_STATE_RESULT = "presenceStateResult";
     public final static String PRESENCE_LEAVE_RESULT = "presenceLeaveResult";
     public final static String SUBSCRIBE_STATISTICS_RESULT = "subscribeStatisticsResult";
 
-    public static final int HERE_NOW_TASK = 1;
+    //public static final int HERE_NOW_TASK = 1;
     public static final int PRESENCE_TASK = 2;
     public static final int SUBSCRIBE_STATISTICS_TASK = 3;
 
@@ -85,7 +85,7 @@ public class PubnubUserListActivity extends ListActivity {
                     case PRESENCE_JOIN_CODE:
                         PubnubUser joinedUser = data.getParcelableExtra(PRESENCE_JOIN_RESULT);
                         if(null == joinedUser) break;
-                        if(users.isEmpty()) break;
+                        if(joinedUser.getName().equalsIgnoreCase(myName)) break;
                         for(PubnubUser user: users){
                             if(user.getName().equalsIgnoreCase(joinedUser.getName())){
                                 return;
@@ -156,19 +156,27 @@ public class PubnubUserListActivity extends ListActivity {
         super.onStop();
         Log.d(LOG_TAG, "PubnubUserListActivity.onStop()");
         isActive = false;
-        pubnubService.unsubscribeFromPubnubChannel();
         if (!bound) return;
         unbindService(serviceConnection);
         bound = false;
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Log.d(LOG_TAG, "PubnubUserListActivity.onBackButtonPressed()");
+        pubnubService.unsubscribeFromPubnubChannel();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "PubnubUserListActivity.onDestroy()");
+        pubnubService.unsubscribePresencePubnub();
     }
 
     public void onUserItemPlayBtnClick(View v) {
+        pubnubService.unsubscribeFromPubnubChannel();
         isActive = false;
         RelativeLayout vwParentRow = (RelativeLayout) v.getParent();
         TextView child = (TextView) vwParentRow.getChildAt(0);

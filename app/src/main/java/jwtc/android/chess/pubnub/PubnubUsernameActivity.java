@@ -27,9 +27,9 @@ public class PubnubUsernameActivity extends Activity {
 
     private static final String LOG_TAG = "PUBNUB";
     public static final String HERE_NOW_PINTENT = "usernameHereNowIntent";
-    public static final int HERE_NOW_CODE = 99;
+    public static final int HERE_NOW_CODE = 100;
     public final static String HERE_NOW_RESULT = "usernameHereNowResult";
-    public static final int HERE_NOW_TASK = 0;
+    public static final int HERE_NOW_TASK = 1;
 
     private PubnubService pubnubService;
     private Intent intent;
