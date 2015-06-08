@@ -175,9 +175,13 @@ public class PubnubChessActivity extends MyBaseActivity {
                         }
                         break;
                     case END:
-                        if(gameId.equalsIgnoreCase(id) && jsonObject.getString("winner").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
+                        if(gameId.equalsIgnoreCase(id) && jsonObject.getString("sendTo").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
                             String pgn = fromJsonToPGN(jsonObject);
-                            showWinnerDialog(pgn);
+                            if(jsonObject.getString("winner") != null){
+                                showResultDialog("Congrats, you win!", pgn);
+                            }else{
+                                showResultDialog("Oh, that's draw!", pgn);
+                            }
                             isGameCreated = false;
                         }
                         break;
@@ -220,9 +224,9 @@ public class PubnubChessActivity extends MyBaseActivity {
         return true;
     }
 
-    private void showWinnerDialog(String pgnResult){
+    private void showResultDialog(String title, String pgnResult){
         new AlertDialog.Builder(this)
-                .setTitle("Congrats, you win!")
+                .setTitle(title)
                 .setMessage("Game PGN:")
                 .setMessage(pgnResult)
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {

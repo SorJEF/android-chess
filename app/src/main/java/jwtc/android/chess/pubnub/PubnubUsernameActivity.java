@@ -32,7 +32,6 @@ public class PubnubUsernameActivity extends Activity {
     public static final int HERE_NOW_TASK = 1;
 
     private PubnubService pubnubService;
-    private Intent intent;
     private boolean bound = false;
     private  ArrayList<PubnubUser> hereNowUsers;
 
@@ -46,7 +45,6 @@ public class PubnubUsernameActivity extends Activity {
         setContentView(R.layout.pubnub_username);
         findAllViewId();
         hereNowUsers = new ArrayList<PubnubUser>();
-        intent = new Intent(this, PubnubService.class);
     }
 
     public void onNextBtnClick(View view) {
