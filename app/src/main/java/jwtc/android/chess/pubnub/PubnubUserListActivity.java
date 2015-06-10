@@ -15,6 +15,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import jwtc.android.chess.R;
@@ -43,6 +46,7 @@ public class PubnubUserListActivity extends ListActivity {
     public static final int SUBSCRIBE_STATISTICS_TASK = 4;
 
     static boolean isActive = false; // used in PubnubService to understand is PubnubUserListActivity active now or not
+    static boolean isPresenceCalled = false;
     private String myName;
     private PubnubService pubnubService;
 
@@ -72,22 +76,22 @@ public class PubnubUserListActivity extends ListActivity {
         Log.d(LOG_TAG, "requestCode = " + requestCode + ", resultCode = " + resultCode);
         switch (requestCode) {
             case HERE_NOW_TASK:
-                if(resultCode == HERE_NOW_CODE){
+                if (resultCode == HERE_NOW_CODE) {
                     ArrayList<PubnubUser> hereNowUsers = data.getExtras().getParcelableArrayList(HERE_NOW_RESULT);
-                    if(hereNowUsers == null || users == null) return;
-                    users.clear();
+                    if (hereNowUsers == null || users == null) return;
+                    users.removeAll(hereNowUsers);
                     users.addAll(hereNowUsers);
                     adapter.notifyDataSetChanged();
                 }
                 break;
             case PRESENCE_TASK:
-                switch (resultCode){
+                switch (resultCode) {
                     case PRESENCE_JOIN_CODE:
                         PubnubUser joinedUser = data.getParcelableExtra(PRESENCE_JOIN_RESULT);
-                        if(null == joinedUser) break;
-                        if(joinedUser.getName().equalsIgnoreCase(myName)) break;
-                        for(PubnubUser user: users){
-                            if(user.getName().equalsIgnoreCase(joinedUser.getName())){
+                        if (null == joinedUser) break;
+                        if (joinedUser.getName().equalsIgnoreCase(myName)) break;
+                        for (PubnubUser user : users) {
+                            if (user.getName().equalsIgnoreCase(joinedUser.getName())) {
                                 return;
                             }
                         }
@@ -96,8 +100,8 @@ public class PubnubUserListActivity extends ListActivity {
                         break;
                     case PRESENCE_STATE_CODE:
                         PubnubUser stateChangedUser = data.getParcelableExtra(PRESENCE_STATE_RESULT);
-                        for(PubnubUser user: users){
-                            if(user.getName().equalsIgnoreCase(stateChangedUser.getName())){
+                        for (PubnubUser user : users) {
+                            if (user.getName().equalsIgnoreCase(stateChangedUser.getName())) {
                                 user.setStatus(stateChangedUser.getStatus());
                                 adapter.notifyDataSetChanged();
                                 break;
@@ -106,8 +110,8 @@ public class PubnubUserListActivity extends ListActivity {
                         break;
                     case PRESENCE_LEAVE_CODE:
                         String name = data.getStringExtra(PRESENCE_LEAVE_RESULT);
-                        for(PubnubUser user: users){
-                            if(user.getName().equalsIgnoreCase(name)){
+                        for (PubnubUser user : users) {
+                            if (user.getName().equalsIgnoreCase(name)) {
                                 users.remove(user);
                                 adapter.notifyDataSetChanged();
                                 break;
@@ -119,7 +123,7 @@ public class PubnubUserListActivity extends ListActivity {
                 }
                 break;
             case SUBSCRIBE_STATISTICS_TASK:
-                if(resultCode == SUBSCRIBE_STATISTICS_CODE){
+                if (resultCode == SUBSCRIBE_STATISTICS_CODE) {
                     String statistics = data.getStringExtra(SUBSCRIBE_STATISTICS_RESULT);
                     tvStatistics.setText(statistics);
                 }
@@ -135,11 +139,11 @@ public class PubnubUserListActivity extends ListActivity {
         Log.d(LOG_TAG, "PubnubUserListActivity.onStart()");
         PendingIntent pendingIntent;
         Intent intent;
-        pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
-        intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(HERE_NOW_PINTENT, pendingIntent);
-        startService(intent);
         pendingIntent = createPendingResult(PRESENCE_TASK, new Intent(), 0);
         intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(PRESENCE_PINTENT, pendingIntent);
+        startService(intent);
+        pendingIntent = createPendingResult(HERE_NOW_TASK, new Intent(), 0);
+        intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(HERE_NOW_PINTENT, pendingIntent);
         startService(intent);
         pendingIntent = createPendingResult(SUBSCRIBE_STATISTICS_TASK, new Intent(), 0);
         intent = new Intent(PubnubUserListActivity.this, PubnubService.class).putExtra(SUBSCRIBE_PINTENT, pendingIntent);
@@ -147,18 +151,19 @@ public class PubnubUserListActivity extends ListActivity {
         myName = getIntent().getStringExtra("myName");
         isActive = true;
         if (bound) return;
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-        bound = true;
+        Intent bindIntent = new Intent(PubnubUserListActivity.this, PubnubService.class);
+        bindService(bindIntent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         Log.d(LOG_TAG, "PubnubUserListActivity.onStop()");
+        //pubnubService.unsubscribePresencePubnub();
         isActive = false;
-        if (!bound) return;
+        /*if (!bound) return;
         unbindService(serviceConnection);
-        bound = false;
+        bound = false;*/
     }
 
     @Override
@@ -172,7 +177,9 @@ public class PubnubUserListActivity extends ListActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "PubnubUserListActivity.onDestroy()");
-        pubnubService.unsubscribePresencePubnub();
+        if (!bound) return;
+        unbindService(serviceConnection);
+        bound = false;
     }
 
     public void onUserItemPlayBtnClick(View v) {

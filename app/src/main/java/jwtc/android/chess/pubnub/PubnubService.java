@@ -25,9 +25,8 @@ public class PubnubService extends Service {
     private static final String PUBLISH_KEY = "pub-c-067bc448-4128-49dd-b522-8b8ff9e038f0";
     private static final String CHANNEL = "chess_channel";
     private final Pubnub pubnub = new Pubnub(PUBLISH_KEY, SUBSCRIBE_KEY, true);
-   // private PendingIntent pendingChessIntent;
-   // private PendingIntent pendingUserListIntent;
-    private boolean isPresenceMethodCalled = false;
+    private PendingIntent pendingPresenceIntent = null;
+    private static boolean isPresenceWasRunned = false;
 
     /**
      * Class for clients to access.  Because we know this service always
@@ -40,8 +39,7 @@ public class PubnubService extends Service {
         }
     }
 
-    // This is the object that receives interactions from clients.  See
-    // RemoteService for a more complete example.
+    // This is the object that receives interactions from clients.
     private final IBinder mBinder = new LocalBinder();
 
     @Override
@@ -98,7 +96,7 @@ public class PubnubService extends Service {
         }).start();
     }
 
-    void unsubscribePresencePubnub(){
+   /* void unsubscribePresencePubnub(){
         Log.d(LOG_TAG, "Presence unsubscribe.");
         new Thread(new Runnable() {
             @Override
@@ -106,7 +104,7 @@ public class PubnubService extends Service {
                 pubnub.unsubscribePresence(CHANNEL);
             }
         }).start();
-    }
+    }*/
 
     void subscribeToPubnubChannelForChess(final PendingIntent pendingIntent) {
         new Thread(new Runnable() {
@@ -172,17 +170,21 @@ public class PubnubService extends Service {
         }).start();
     }
 
-    void pubnubPresence(final PendingIntent pendingIntent) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    pubnub.presence(CHANNEL, getPubnubPresenceCallback(pendingIntent));
-                } catch (PubnubException e) {
-                    e.printStackTrace();
+    void pubnubPresence(PendingIntent pendingIntent) {
+        pendingPresenceIntent = pendingIntent;
+        if(!isPresenceWasRunned){
+            isPresenceWasRunned = true;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        pubnub.presence(CHANNEL, getPubnubPresenceCallback());
+                    } catch (PubnubException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-        }).start();
+            }).start();
+        }
     }
 
     String getUUID() {
@@ -223,12 +225,21 @@ public class PubnubService extends Service {
         return users;
     }
 
-    private Callback getPubnubPresenceCallback(final PendingIntent pendingIntent) {
+    private Callback getPubnubPresenceCallback() {
         return new Callback() {
             @Override
             public void successCallback(String channel, Object message) {
                 Log.d(LOG_TAG, channel + " : " + message.getClass() + " : " + message.toString());
                 if (!PubnubUserListActivity.isActive) return;
+                if( pendingPresenceIntent == null){
+                    while (pendingPresenceIntent == null){
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
                 PubnubUser pubnubUser = new PubnubUser();
                 try {
                     JSONObject response = new JSONObject(message.toString());
@@ -239,18 +250,18 @@ public class PubnubService extends Service {
                         pubnubUser.setName(name);
                         pubnubUser.setStatus("waiting");
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.PRESENCE_JOIN_RESULT, pubnubUser);
-                        pendingIntent.send(PubnubService.this, PubnubUserListActivity.PRESENCE_JOIN_CODE, intent);
+                        pendingPresenceIntent.send(PubnubService.this, PubnubUserListActivity.PRESENCE_JOIN_CODE, intent);
                     } else if (action.equalsIgnoreCase("state-change")) {
                         String status = response.getJSONObject("data").getString("status");
                         String name = response.getString("uuid");
                         pubnubUser.setName(name);
                         pubnubUser.setStatus(status);
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.PRESENCE_STATE_RESULT, pubnubUser);
-                        pendingIntent.send(PubnubService.this, PubnubUserListActivity.PRESENCE_STATE_CODE, intent);
+                        pendingPresenceIntent.send(PubnubService.this, PubnubUserListActivity.PRESENCE_STATE_CODE, intent);
                     } else if (action.equalsIgnoreCase("leave") || action.equalsIgnoreCase("timeout")) {
                         String name = response.getString("uuid");
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.PRESENCE_LEAVE_RESULT, name);
-                        pendingIntent.send(PubnubService.this, PubnubUserListActivity.PRESENCE_LEAVE_CODE, intent);
+                        pendingPresenceIntent.send(PubnubService.this, PubnubUserListActivity.PRESENCE_LEAVE_CODE, intent);
                     }
                 } catch (PendingIntent.CanceledException e) {
                     Log.d(LOG_TAG, "PubnubService.pubnubPresence(). Can't send result to Activity: " + e.toString());

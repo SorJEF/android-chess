@@ -54,4 +54,21 @@ public class PubnubUser implements Parcelable{
     public void setStatus(String status) {
         this.status = status;
     }
+
+    @Override
+    public String toString() {
+        return getName();
+    }
+
+    @Override
+    public int hashCode() {
+        return toString().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(o == null) return false;
+        PubnubUser user = (PubnubUser) o;
+        return user.getName().equalsIgnoreCase(name);
+    }
 }
