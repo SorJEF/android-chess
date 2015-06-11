@@ -52,23 +52,23 @@ public class PubnubService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i("PubnubService", "Received start id " + startId + ": " + intent);
         PendingIntent pendingUserNameIntent = intent.getParcelableExtra(PubnubUsernameActivity.HERE_NOW_PINTENT);
-        if(pendingUserNameIntent != null){
+        if (pendingUserNameIntent != null) {
             pubnubUserNameHereNow(pendingUserNameIntent);
         }
         PendingIntent pendingUserListIntent = intent.getParcelableExtra(PubnubUserListActivity.HERE_NOW_PINTENT);
-        if(pendingUserListIntent != null){
+        if (pendingUserListIntent != null) {
             pubnubUserListHereNow(pendingUserListIntent);
         }
         PendingIntent pendingUserItemIntent = intent.getParcelableExtra(PubnubUserListActivity.PRESENCE_PINTENT);
-        if(pendingUserItemIntent != null){
+        if (pendingUserItemIntent != null) {
             pubnubPresence(pendingUserItemIntent);
         }
         PendingIntent pendingUserStatisticsIntent = intent.getParcelableExtra(PubnubUserListActivity.SUBSCRIBE_PINTENT);
-        if(pendingUserStatisticsIntent != null) {
+        if (pendingUserStatisticsIntent != null) {
             subscribeToPubnubChannelForStatistics(pendingUserStatisticsIntent);
         }
         PendingIntent pendingChessIntent = intent.getParcelableExtra(PubnubChessActivity.CHESS_PINTENT);
-        if(pendingChessIntent != null) {
+        if (pendingChessIntent != null) {
             subscribeToPubnubChannelForChess(pendingChessIntent);
         }
         // We want this service to continue running until it is explicitly
@@ -88,102 +88,58 @@ public class PubnubService extends Service {
 
     void publishToPubnubChannel(final JSONObject message) {
         Log.d(LOG_TAG, "Publish to Pubnub: " + message);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                pubnub.publish(CHANNEL, message, getPubnubPublishCallback());
-            }
-        }).start();
+        pubnub.publish(CHANNEL, message, getPubnubPublishCallback());
     }
 
-   /* void unsubscribePresencePubnub(){
-        Log.d(LOG_TAG, "Presence unsubscribe.");
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                pubnub.unsubscribePresence(CHANNEL);
-            }
-        }).start();
-    }*/
-
     void subscribeToPubnubChannelForChess(final PendingIntent pendingIntent) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    pubnub.subscribe(CHANNEL, getPubnubChessSubscribeCallback(pendingIntent));
-                } catch (PubnubException e) {
-                    Log.d(LOG_TAG, "SUBSCRIBE_ERROR" + e.toString());
-                }
-            }
-        }).start();
+        Log.d(LOG_TAG, "Subscribe on Pubnub Channel for chess.");
+        try {
+            pubnub.subscribe(CHANNEL, getPubnubChessSubscribeCallback(pendingIntent));
+        } catch (PubnubException e) {
+            Log.d(LOG_TAG, "SUBSCRIBE_ERROR" + e.toString());
+        }
     }
 
     void subscribeToPubnubChannelForStatistics(final PendingIntent pendingIntent) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    pubnub.subscribe(CHANNEL, getPubnubStatisticsSubscribeCallback(pendingIntent));
-                } catch (PubnubException e) {
-                    Log.d(LOG_TAG, "SUBSCRIBE_ERROR" + e.toString());
-                }
-            }
-        }).start();
+        Log.d(LOG_TAG, "Subscribe on Pubnub Channel for statistics.");
+        try {
+            pubnub.subscribe(CHANNEL, getPubnubStatisticsSubscribeCallback(pendingIntent));
+        } catch (PubnubException e) {
+            Log.d(LOG_TAG, "SUBSCRIBE_ERROR" + e.toString());
+        }
     }
 
     void unsubscribeFromPubnubChannel() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Log.d(LOG_TAG, "UNSUBSCRIBE()");
-                pubnub.unsubscribe(CHANNEL);
-            }
-        }).start();
+        Log.d(LOG_TAG, "Unsubscribe from Pubnub Channel.");
+        pubnub.unsubscribe(CHANNEL);
     }
 
     void setPubnubState(final String uuid, final JSONObject state) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                pubnub.setUUID(uuid);
-                pubnub.setState(CHANNEL, uuid, state, getPubnubStateCallback());
-            }
-        }).start();
+        Log.d(LOG_TAG, "Set pubnub state for: " + uuid);
+        pubnub.setUUID(uuid);
+        pubnub.setState(CHANNEL, uuid, state, getPubnubStateCallback());
     }
 
     void pubnubUserNameHereNow(final PendingIntent pendingIntent) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                pubnub.hereNow(CHANNEL, true, true, getPubnubHereNowUserNameCallback(pendingIntent));
-            }
-        }).start();
+        Log.d(LOG_TAG, "Pubnub here now(). For UsernameActivity.");
+        pubnub.hereNow(CHANNEL, true, true, getPubnubHereNowUserNameCallback(pendingIntent));
     }
 
     void pubnubUserListHereNow(final PendingIntent pendingIntent) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                pubnub.hereNow(CHANNEL, true, true, getPubnubHereNowUserListCallback(pendingIntent));
-            }
-        }).start();
+        Log.d(LOG_TAG, "Pubnub here now(). For UserListActivity.");
+        pubnub.hereNow(CHANNEL, true, true, getPubnubHereNowUserListCallback(pendingIntent));
     }
 
     void pubnubPresence(PendingIntent pendingIntent) {
+        Log.d(LOG_TAG, "Pubnub presence().");
         pendingPresenceIntent = pendingIntent;
-        if(!isPresenceWasRunned){
+        if (!isPresenceWasRunned) {
             isPresenceWasRunned = true;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        pubnub.presence(CHANNEL, getPubnubPresenceCallback());
-                    } catch (PubnubException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
+            try {
+                pubnub.presence(CHANNEL, getPubnubPresenceCallback());
+            } catch (PubnubException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -205,7 +161,7 @@ public class PubnubService extends Service {
                 try {
                     jsonUser = jsonArray.getJSONObject(i);
                     name = jsonUser.getString("uuid");
-                        if (name.equalsIgnoreCase("system_8648739c-b1da-4a4e-ab2c-f21a380896cf") || name.equalsIgnoreCase(getUUID()))
+                    if (name.equalsIgnoreCase("system_8648739c-b1da-4a4e-ab2c-f21a380896cf") || name.equalsIgnoreCase(getUUID()))
                         continue;
                 } catch (JSONException e) {
                     continue;
@@ -231,22 +187,13 @@ public class PubnubService extends Service {
             public void successCallback(String channel, Object message) {
                 Log.d(LOG_TAG, channel + " : " + message.getClass() + " : " + message.toString());
                 if (!PubnubUserListActivity.isActive) return;
-                if( pendingPresenceIntent == null){
-                    while (pendingPresenceIntent == null){
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
                 PubnubUser pubnubUser = new PubnubUser();
                 try {
                     JSONObject response = new JSONObject(message.toString());
                     String action = response.getString("action");
                     if (action.equalsIgnoreCase("join")) {
                         String name = response.getString("uuid");
-                        if(name.equalsIgnoreCase(getUUID())) return;
+                        if (name.equalsIgnoreCase(getUUID())) return;
                         pubnubUser.setName(name);
                         pubnubUser.setStatus("waiting");
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.PRESENCE_JOIN_RESULT, pubnubUser);
@@ -269,6 +216,7 @@ public class PubnubService extends Service {
                     Log.d(LOG_TAG, "PubnubService.pubnubPresence(). Can't send result to Activity: " + e.toString());
                 }
             }
+
             @Override
             public void errorCallback(String channel, PubnubError error) {
                 Log.d(LOG_TAG, "ERROR on channel " + channel + " : " + error.toString());
@@ -276,7 +224,7 @@ public class PubnubService extends Service {
         };
     }
 
-    private Callback getPubnubStatisticsSubscribeCallback(final PendingIntent pendingIntent){
+    private Callback getPubnubStatisticsSubscribeCallback(final PendingIntent pendingIntent) {
         return new Callback() {
             @Override
             public void successCallback(String channel, Object message) {
@@ -285,7 +233,7 @@ public class PubnubService extends Service {
                 JSONObject jsonObject;
                 try {
                     jsonObject = new JSONObject(message.toString());
-                    if(jsonObject.has("action") && jsonObject.getString("action").equalsIgnoreCase("statistics") && jsonObject.getString("user").equalsIgnoreCase(getUUID())){
+                    if (jsonObject.has("action") && jsonObject.getString("action").equalsIgnoreCase("statistics") && jsonObject.getString("user").equalsIgnoreCase(getUUID())) {
                         String statistics = "Here is your statistic, " + getUUID() + ".\nTotal: " + jsonObject.getInt("total") + ", Win: " + jsonObject.getInt("win") + ", Lose: " + jsonObject.getInt("lose") + ", Draw: " + jsonObject.getInt("draw");
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.SUBSCRIBE_STATISTICS_RESULT, statistics);
                         pendingIntent.send(PubnubService.this, PubnubUserListActivity.SUBSCRIBE_STATISTICS_CODE, intent);
@@ -299,7 +247,7 @@ public class PubnubService extends Service {
                 } catch (JSONException e) {
                     try {
                         JSONArray jsonArray = new JSONArray(message.toString());
-                        if(jsonArray.length() == 0){
+                        if (jsonArray.length() == 0) {
                             String statistics = "Here is your statistic, " + getUUID() + ".\nTotal: 0, Win: 0, Lose: 0, Draw: 0";
                             Intent intent = new Intent().putExtra(PubnubUserListActivity.SUBSCRIBE_STATISTICS_RESULT, statistics);
                             pendingIntent.send(PubnubService.this, PubnubUserListActivity.SUBSCRIBE_STATISTICS_CODE, intent);
@@ -322,6 +270,7 @@ public class PubnubService extends Service {
             }
         };
     }
+
     private Callback getPubnubChessSubscribeCallback(final PendingIntent pendingChessIntent) {
         return new Callback() {
             @Override
@@ -377,6 +326,7 @@ public class PubnubService extends Service {
                     Log.d(LOG_TAG, "PubnubService.pubnubHereNow(). Can't send result to Activity: " + e.toString());
                 }
             }
+
             public void errorCallback(String channel, PubnubError error) {
                 Log.d(LOG_TAG, "HERE_NOW_ERROR" + error.toString());
             }
