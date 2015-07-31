@@ -94,12 +94,18 @@
                     android:layout_width="fill_parent" android:layout_height="fill_parent"
                     android:layout_below="@id/TableICSPlayButtons"
                     >
-                    <TextView android:text="Welcome to PubNub Chess"
+                    <!--<TextView android:text="Welcome to PubNub Chess"
                         android:id="@+id/TextViewICSPlayConsole"
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content"
                         style="@style/MyTextStyle"
-                        />
+                        />-->
+                    <TextView
+                        android:id="@+id/tvTendencies"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:text=""/>
+
                     <TableLayout android:layout_width="fill_parent" android:layout_height="fill_parent"
                         android:layout_marginTop="16dip"
                         android:stretchColumns="*">

@@ -15,6 +15,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -38,6 +39,8 @@ public class PubnubChessActivity extends MyBaseActivity {
     private String myName = null;
     private String gameId;
 
+    private TextView tvTendencies;
+
     static boolean isActive = false; // used in PubnubService to understand is PubnubChessActivity active now or not
     static boolean isGameCreated = false;
 
@@ -55,6 +58,7 @@ public class PubnubChessActivity extends MyBaseActivity {
         setContentView(R.layout.pubnub_chess);
         view = new PubnubChessView(this);
         view.init();
+        tvTendencies = (TextView) findViewById(R.id.tvTendencies);
         Log.i(LOG_TAG, "PubnubChessActivity.onCreate()");
     }
 
@@ -185,6 +189,20 @@ public class PubnubChessActivity extends MyBaseActivity {
                             isGameCreated = false;
                         }
                         break;
+                    case TENDENCIES:
+                        String opponent = jsonObject.getString("opponent");
+                        if(id.equalsIgnoreCase(gameId) && opponent.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
+                            showOpponentTendencies(jsonObject);
+                        }
+                        break;
+                    case OPENING_MOVE:
+                        String opening;
+                        String user = jsonObject.getString("user");
+                        if(id.equalsIgnoreCase(gameId) && user.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
+                            opening = jsonObject.getString("opening");
+                            showOpeningsDialog(opening);
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -222,6 +240,51 @@ public class PubnubChessActivity extends MyBaseActivity {
             return false;
         }
         return true;
+    }
+
+    private void showOpponentTendencies(JSONObject jsonObject) throws JSONException {
+        String tendencies = parseOpponentTendencies(jsonObject);
+        tvTendencies.setText(tendencies);
+    }
+
+    private String parseOpponentTendencies(JSONObject jsonObject) throws JSONException {
+        JSONArray tendenciesArray = jsonObject.getJSONArray("tendencies");
+        String tendencies = opponentName + " used next chess openings: ";
+        if(tendenciesArray.length() == 0) return opponentName + " still hasn't use any chess openings.";
+        for (int i = 0; i < tendenciesArray.length(); i++) {
+            JSONArray openingsArray;
+            try {
+                openingsArray = tendenciesArray.getJSONArray(i);
+                tendencies += openingsArray.get(0) + " in ";
+                tendencies += openingsArray.get(1) + " games";
+                if(i + 1 < tendenciesArray.length()){
+                    tendencies += " , ";
+                }else{
+                    tendencies += ".";
+                }
+            } catch (JSONException e) {
+                // do nothing
+            }
+        }
+        return tendencies;
+    }
+
+    private void showOpeningsDialog(String openingMove){
+        new AlertDialog.Builder(this)
+                .setTitle("Chess opening move!")
+                .setMessage("Your opponent made next opening move: " + openingMove)
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                    }
+                })
+                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
     }
 
     private void showResultDialog(String title, String pgnResult){
@@ -279,6 +342,8 @@ enum GameType {
     CONTINUE("continue"),
     CREATE("create"),
     END("end"),
+    TENDENCIES("opponentTendencies"),
+    OPENING_MOVE("openingMove"),
     UNKNOWN("unknown");
 
     private String typeValue;
