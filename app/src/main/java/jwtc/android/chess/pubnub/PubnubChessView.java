@@ -48,6 +48,7 @@ public class PubnubChessView extends ChessViewBase {
     private static final int MSG_TOP_TIME = 1, MSG_BOTTOM_TIME = 2;
     public static final int VIEW_NONE = 0, VIEW_PLAY = 1, VIEW_WATCH = 2, VIEW_EXAMINE = 3, VIEW_PUZZLE = 4, VIEW_ENDGAME = 5;
     protected int viewMode;
+    private int moveSeq;
 
     protected Handler mTimerHandler = new Handler() {
         /** Gets called on every message that is received */
@@ -108,7 +109,7 @@ public class PubnubChessView extends ChessViewBase {
                 tvLastMove.setText("...");
                 String sMove = Pos.toString(mFrom) + "-" + Pos.toString(mTo);
                 try {
-                    parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', gameId: '" + gameId + "', user : '" + me + "', move : '" + sMove + "'}"));
+                    parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', gameId: '" + gameId + "', moveSeq: '" + moveSeq + "', user : '" + me + "', move : '" + sMove + "'}"));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -165,6 +166,7 @@ public class PubnubChessView extends ChessViewBase {
         Log.i("init", "=========");
         mFrom = -1;
         mTo = -1;
+        moveSeq = 0;
         bHandleClick = false;
         bOngoingGame = false;
         opponent = "";
@@ -228,6 +230,7 @@ public class PubnubChessView extends ChessViewBase {
         checkGameState(state);
         mFrom = -1;
         mTo = -1;
+        moveSeq += 2;
     }
 
     private void checkGameState(int state) {
@@ -307,10 +310,12 @@ public class PubnubChessView extends ChessViewBase {
         iWhiteRemaining = 600;
         iBlackRemaining = 600;
         if (iStart) {
+            moveSeq = 1;
             _flippedBoard = false;
             whitePlayer = me;
             blackPlayer = opponent;
         } else {
+            moveSeq = 0;
             _flippedBoard = true;
             whitePlayer = opponent;
             blackPlayer = me;

@@ -190,25 +190,37 @@ public class PubnubChessActivity extends MyBaseActivity {
                         }
                         break;
                     case TENDENCIES:
-                        String opponent = jsonObject.getString("opponent");
+                        String opponent = jsonObject.getString("user");
                         if(id.equalsIgnoreCase(gameId) && opponent.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
                             showOpponentTendencies(jsonObject);
                         }
                         break;
-                    case OPENING_MOVE:
-                        String opening;
-                        String user = jsonObject.getString("user");
-                        if(id.equalsIgnoreCase(gameId) && user.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
-                            opening = jsonObject.getString("opening");
-                            showOpeningsDialog(opening);
-                        }
-                        break;
+//                    case OPENING_MOVE:
+//                        String opening;
+//                        String user = jsonObject.getString("user");
+//                        if(id.equalsIgnoreCase(gameId) && user.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
+//                            opening = jsonObject.getString("opening");
+//                            showOpeningsDialog(opening);
+//                        }
+//                        break;
                     default:
                         break;
                 }
             }
-        } catch (JSONException e) {
-            Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + e.toString());
+        } catch (JSONException ex) {
+            Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + ex.toString());
+            try{
+                String opening;
+                jsonObject = new JSONObject(line);
+                String user = jsonObject.getString("user");
+                String id = jsonObject.getString("gameId");
+                if(id.equalsIgnoreCase(gameId) && user.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
+                    opening = jsonObject.getString("openingName");
+                    showOpeningsDialog(opening);
+                }
+            }catch (JSONException e){
+                Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + e.toString());
+            }
         }
     }
 
@@ -248,23 +260,38 @@ public class PubnubChessActivity extends MyBaseActivity {
     }
 
     private String parseOpponentTendencies(JSONObject jsonObject) throws JSONException {
-        JSONArray tendenciesArray = jsonObject.getJSONArray("tendencies");
+        JSONArray tendenciesArray = jsonObject.getJSONArray("openings");
         String tendencies = opponentName + " used next chess openings: ";
+        String LOG = "YOYO";
+        Log.d(LOG, tendencies);
         if(tendenciesArray.length() == 0) return opponentName + " still hasn't use any chess openings.";
+        Log.d(LOG, tendencies);
+//        for (int i = 0; i < tendenciesArray.length(); i++) {
+//            JSONArray openingsArray;
+//            try {
+//                openingsArray = tendenciesArray.getJSONArray(i);
+//                tendencies += openingsArray.get(0) + " in ";
+//                tendencies += openingsArray.get(1) + " games";
+//                if(i + 1 < tendenciesArray.length()){
+//                    tendencies += " , ";
+//                }else{
+//                    tendencies += ".";
+//                }
+//            } catch (JSONException e) {
+//                // do nothing
+//            }
+//        }
         for (int i = 0; i < tendenciesArray.length(); i++) {
-            JSONArray openingsArray;
-            try {
-                openingsArray = tendenciesArray.getJSONArray(i);
-                tendencies += openingsArray.get(0) + " in ";
-                tendencies += openingsArray.get(1) + " games";
-                if(i + 1 < tendenciesArray.length()){
-                    tendencies += " , ";
-                }else{
-                    tendencies += ".";
-                }
-            } catch (JSONException e) {
-                // do nothing
+            JSONObject tendency = tendenciesArray.getJSONObject(i);
+            Log.d(LOG, tendency.toString());
+            tendencies += tendency.getString("name") + " in ";
+            tendencies += tendency.getString("count") + " games";
+            if(i + 1 < tendenciesArray.length()){
+                tendencies += " , ";
+            }else{
+                tendencies += ".";
             }
+            Log.d(LOG, tendencies);
         }
         return tendencies;
     }
@@ -342,8 +369,8 @@ enum GameType {
     CONTINUE("continue"),
     CREATE("create"),
     END("end"),
-    TENDENCIES("opponentTendencies"),
-    OPENING_MOVE("openingMove"),
+    TENDENCIES("tendencies"),
+//    OPENING_MOVE("openingName"),
     UNKNOWN("unknown");
 
     private String typeValue;
