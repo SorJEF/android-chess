@@ -275,7 +275,7 @@ public class PubnubChessActivity extends MyBaseActivity {
     private String parseOpponentTendencies(JSONObject jsonObject) throws JSONException {
         JSONArray tendenciesArray = jsonObject.optJSONArray("openings");
         String tendencies = "Player '" + opponentName + "' used next chess openings: ";
-        if(tendenciesArray == null) return "Player '" + opponentName + "' still hasn't use any chess openings.";
+        if(tendenciesArray == null) return "Player '" + opponentName + "' hasn't used any chess openings yet.";
         for (int i = 0; i < tendenciesArray.length(); i++) {
             JSONObject tendency = tendenciesArray.getJSONObject(i);
             tendencies += tendency.getString("name") + " in ";
