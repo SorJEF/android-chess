@@ -16,7 +16,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class PubnubService extends Service {
 
@@ -87,6 +90,14 @@ public class PubnubService extends Service {
     }
 
     void publishToPubnubChannel(final JSONObject message) {
+        SimpleDateFormat f = new SimpleDateFormat("yyyy-mm-dd'T'HH:mm:ss.SSS'Z'");
+        f.setTimeZone(TimeZone.getTimeZone("UTC"));
+        String date = f.format(new Date());
+        try {
+            message.put("timestamp", date);
+        } catch (JSONException e) {
+            Log.d(LOG_TAG, "Couldn't add timestamp field to message '" + message + "' before publish to Pubnub. Error: " + e);
+        }
         Log.d(LOG_TAG, "Publish to Pubnub: " + message);
         pubnub.publish(CHANNEL, message, getPubnubPublishCallback());
     }

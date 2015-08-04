@@ -109,7 +109,14 @@ public class PubnubChessView extends ChessViewBase {
                 tvLastMove.setText("...");
                 String sMove = Pos.toString(mFrom) + "-" + Pos.toString(mTo);
                 try {
-                    parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', gameId: '" + gameId + "', moveSeq: '" + moveSeq + "', user : '" + me + "', move : '" + sMove + "'}"));
+                    //parent.sendJsonToPubnub(new JSONObject("{ game : 'continue', gameId: '" + gameId + "', moveSeq: '" + moveSeq + "', user : '" + me + "', move : '" + sMove + "'}"));
+                    JSONObject moveObj = new JSONObject();
+                    moveObj.put("game", "continue");
+                    moveObj.put("gameId", gameId);
+                    moveObj.put("moveSeq", moveSeq);
+                    moveObj.put("user", me);
+                    moveObj.put("move", sMove);
+                    parent.sendJsonToPubnub(moveObj);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }

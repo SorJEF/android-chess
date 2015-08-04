@@ -213,6 +213,10 @@ public class PubnubChessActivity extends MyBaseActivity {
             try{
                 String opening;
                 jsonObject = new JSONObject(line);
+                if(tvTendencies.getText().toString().trim().length() == 0){
+                    showOpponentTendencies(jsonObject);
+                    return;
+                }
                 String user = jsonObject.getString("user");
                 String id = jsonObject.getString("gameId");
                 if(id.equalsIgnoreCase(gameId) && user.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
@@ -269,9 +273,9 @@ public class PubnubChessActivity extends MyBaseActivity {
     }
 
     private String parseOpponentTendencies(JSONObject jsonObject) throws JSONException {
-        JSONArray tendenciesArray = jsonObject.getJSONArray("openings");
+        JSONArray tendenciesArray = jsonObject.optJSONArray("openings");
         String tendencies = "Player '" + opponentName + "' used next chess openings: ";
-        if(tendenciesArray.length() == 0) return opponentName + " still hasn't use any chess openings.";
+        if(tendenciesArray == null) return "Player '" + opponentName + "' still hasn't use any chess openings.";
         for (int i = 0; i < tendenciesArray.length(); i++) {
             JSONObject tendency = tendenciesArray.getJSONObject(i);
             tendencies += tendency.getString("name") + " in ";
