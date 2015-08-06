@@ -196,14 +196,6 @@ public class PubnubChessActivity extends MyBaseActivity {
                             showOpponentTendencies(jsonObject);
                         }
                         break;
-//                    case OPENING_MOVE:
-//                        String opening;
-//                        String user = jsonObject.getString("user");
-//                        if(id.equalsIgnoreCase(gameId) && user.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
-//                            opening = jsonObject.getString("opening");
-//                            showOpeningsDialog(opening);
-//                        }
-//                        break;
                     default:
                         break;
                 }
@@ -219,9 +211,13 @@ public class PubnubChessActivity extends MyBaseActivity {
                 }
                 String user = jsonObject.getString("user");
                 String id = jsonObject.getString("gameId");
-                if(id.equalsIgnoreCase(gameId) && user.equalsIgnoreCase(opponentName)){ // display opponent tendencies only if this my opponent
+                if(id.equalsIgnoreCase(gameId)){ // display opponent tendencies only if this my opponent
                     opening = jsonObject.getString("openingName");
-                    showOpeningsDialog(opening);
+                    if(user.equalsIgnoreCase(opponentName)){
+                        showOpeningsDialog("Be careful! Your opponent made powerful opening move: " +  opening + ".");
+                    }else if(user.equalsIgnoreCase(myName)){
+                        showOpeningsDialog("Great! You made powerful opening move: " +  opening + ".");
+                    }
                 }
             }catch (JSONException e){
                 Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + e.toString());
@@ -292,7 +288,7 @@ public class PubnubChessActivity extends MyBaseActivity {
     private void showOpeningsDialog(String openingMove){
         new AlertDialog.Builder(this)
                 .setTitle("Chess opening move!")
-                .setMessage("Your opponent made next opening move: " + openingMove)
+                .setMessage(openingMove)
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // do nothing
