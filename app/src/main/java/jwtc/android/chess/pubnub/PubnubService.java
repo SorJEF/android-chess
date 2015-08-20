@@ -24,8 +24,8 @@ import java.util.TimeZone;
 public class PubnubService extends Service {
 
     private static final String LOG_TAG = "PUBNUB";
-    private static final String SUBSCRIBE_KEY = "sub-c-2a5d3110-fd71-11e4-afbd-02ee2ddab7fe";
-    private static final String PUBLISH_KEY = "pub-c-067bc448-4128-49dd-b522-8b8ff9e038f0";
+    private static final String SUBSCRIBE_KEY = "sub-c-c28cab62-3f4a-11e5-a563-02ee2ddab7fe";
+    private static final String PUBLISH_KEY = "pub-c-4baaaef8-f23e-42dd-9c46-51e2a6238536";
     private static final String CHANNEL = "chess_channel";
     private final Pubnub pubnub = new Pubnub(PUBLISH_KEY, SUBSCRIBE_KEY, true);
     private PendingIntent pendingPresenceIntent = null;

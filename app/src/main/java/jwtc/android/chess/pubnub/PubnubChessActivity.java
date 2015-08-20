@@ -21,6 +21,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
 import jwtc.android.chess.MyBaseActivity;
 import jwtc.android.chess.R;
 
@@ -180,7 +185,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                         }
                         break;
                     case END:
-                        if(gameId.equalsIgnoreCase(id) && jsonObject.getString("sendTo").equalsIgnoreCase(myName)){ // get PGN result from punub only if I am a winner
+                        if(gameId.equalsIgnoreCase(id) && jsonObject.getString("sendTo").equalsIgnoreCase(myName)){ // get PGN result from pubnub only if I am a winner
                             String pgn = fromJsonToPGN(jsonObject);
                             if(jsonObject.getString("winner") != null){
                                 showResultDialog("Congrats, you win!", pgn);
@@ -203,7 +208,6 @@ public class PubnubChessActivity extends MyBaseActivity {
         } catch (JSONException ex) {
             Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + ex.toString());
             try{
-                String opening;
                 jsonObject = new JSONObject(line);
                 if(tvTendencies.getText().toString().trim().length() == 0){
                     showOpponentTendencies(jsonObject);
@@ -212,15 +216,37 @@ public class PubnubChessActivity extends MyBaseActivity {
                 String user = jsonObject.getString("user");
                 String id = jsonObject.getString("gameId");
                 if(id.equalsIgnoreCase(gameId)){ // display opponent tendencies only if this my opponent
-                    opening = jsonObject.getString("openingName");
+                    String opening = jsonObject.getString("opening");
+                    String firstMoveTimestamp = jsonObject.getString("firstMoveTimestamp");
+                    String lastMoveTimestamp = jsonObject.getString("timestamp");
+                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                    Date firstMoveDate = format.parse(firstMoveTimestamp);
+                    Date lastMoveDate = format.parse(lastMoveTimestamp);
+                    long delta = lastMoveDate.getTime() - firstMoveDate.getTime();
+                    long seconds = TimeUnit.MILLISECONDS.toSeconds(delta);
+                    long minutes = seconds / 60;
+                    long hours = minutes / 60;
+                    String timeForOpening = "";
+                    if(hours > 0) {
+                        timeForOpening += hours + " hours ";
+                        timeForOpening += minutes % 60 + " minutes ";
+                        timeForOpening += seconds % 60 + " seconds for this opening.";
+                    } else if(minutes > 0) {
+                        timeForOpening += minutes + " minutes ";
+                        timeForOpening += seconds % 60 + " seconds for this opening.";
+                    } else {
+                        timeForOpening += seconds + " seconds for this opening.";
+                    }
                     if(user.equalsIgnoreCase(opponentName)){
-                        showOpeningsDialog("Be careful! Your opponent made powerful opening move: " +  opening + ".");
+                        showOpeningsDialog("Be careful! Your opponent made powerful opening move: " +  opening + ". He spent " + timeForOpening);
                     }else if(user.equalsIgnoreCase(myName)){
-                        showOpeningsDialog("Great! You made powerful opening move: " +  opening + ".");
+                        showOpeningsDialog("Great! You made powerful opening move: " +  opening + ". You spent " + timeForOpening);
                     }
                 }
             }catch (JSONException e){
                 Log.d(LOG_TAG, "PubnubChessActivity. Can't parse pubnub json response. Error: " + e.toString());
+            } catch (ParseException e) {
+                Log.d(LOG_TAG, "PubnubChessActivity. Can't parse date json response. Error: " + e.toString());
             }
         }
     }
@@ -271,7 +297,7 @@ public class PubnubChessActivity extends MyBaseActivity {
     private String parseOpponentTendencies(JSONObject jsonObject) throws JSONException {
         JSONArray tendenciesArray = jsonObject.optJSONArray("openings");
         String tendencies = "Player '" + opponentName + "' used next chess openings: ";
-        if(tendenciesArray == null) return "Player '" + opponentName + "' hasn't used any chess openings yet.";
+        if(tendenciesArray == null) return "Player '" + opponentName + "' didn't use any chess opening.";
         for (int i = 0; i < tendenciesArray.length(); i++) {
             JSONObject tendency = tendenciesArray.getJSONObject(i);
             tendencies += tendency.getString("name") + " in ";
