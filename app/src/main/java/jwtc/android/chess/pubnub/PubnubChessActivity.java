@@ -43,6 +43,7 @@ public class PubnubChessActivity extends MyBaseActivity {
     private String opponentName = null;
     private String myName = null;
     private String gameId;
+    private JSONObject opponentTendencies;
 
     private TextView tvTendencies;
 
@@ -238,6 +239,9 @@ public class PubnubChessActivity extends MyBaseActivity {
                         timeForOpening += seconds + " seconds for this opening.";
                     }
                     if(user.equalsIgnoreCase(opponentName)){
+                        String tendency = getNewTendency(opening);
+                        tvTendencies.setText("");
+                        tvTendencies.setText(tendency);
                         showOpeningsDialog("Be careful! Your opponent made powerful opening move: " +  opening + ". He spent " + timeForOpening);
                     }else if(user.equalsIgnoreCase(myName)){
                         showOpeningsDialog("Great! You made powerful opening move: " +  opening + ". You spent " + timeForOpening);
@@ -290,8 +294,43 @@ public class PubnubChessActivity extends MyBaseActivity {
     }
 
     private void showOpponentTendencies(JSONObject jsonObject) throws JSONException {
+        opponentTendencies = jsonObject;
         String tendencies = parseOpponentTendencies(jsonObject);
         tvTendencies.setText(tendencies);
+    }
+
+    private String getNewTendency(String opening) throws JSONException{
+        boolean isOpeningUsed = false;
+        if (opponentTendencies == null) return null;
+        JSONArray tendenciesArray = opponentTendencies.optJSONArray("openings");
+        String tendencies = "Player '" + opponentName + "' used next chess openings: ";
+        if(tendenciesArray == null) {
+            tendencies += opening + " in 1 game.";
+            return tendencies;
+        }
+        for (int i = 0; i < tendenciesArray.length(); i++) {
+            JSONObject tendency = tendenciesArray.getJSONObject(i);
+            String openingName = tendency.getString("name");
+            tendencies += openingName + " in ";
+            if(openingName.equalsIgnoreCase(opening)){
+                int count = Integer.parseInt(tendency.getString("count"));
+                count++;
+                tendencies += count + " games";
+                isOpeningUsed = true;
+            } else{
+                tendencies += tendency.getString("count") + " games";
+            }
+            if(i + 1 == tendenciesArray.length() && !isOpeningUsed){
+                tendencies += ", " + opening + " in ";
+                tendencies += 1 + " game";
+            }
+            if(i + 1 < tendenciesArray.length()){
+                tendencies += " , ";
+            }else{
+                tendencies += ".";
+            }
+        }
+        return tendencies;
     }
 
     private String parseOpponentTendencies(JSONObject jsonObject) throws JSONException {
