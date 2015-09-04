@@ -24,6 +24,7 @@ import org.json.JSONObject;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import jwtc.android.chess.MyBaseActivity;
@@ -44,6 +45,8 @@ public class PubnubChessActivity extends MyBaseActivity {
     private String myName = null;
     private String gameId;
     private JSONObject opponentTendencies;
+    private Date startTimestamp;
+    private Date endTimestamp;
 
     private TextView tvTendencies;
 
@@ -173,6 +176,7 @@ public class PubnubChessActivity extends MyBaseActivity {
                             view.setOpponent(opponentName);
                             view.setGameId(gameId);
                             view.startGame(true);
+                            startTimestamp = getTimestamp();
                             pubnubService.publishToPubnubChannel(jsonObject);
                             setPubnubStatePlaying();
                         } else if(acceptor.equalsIgnoreCase(myName)){
@@ -181,15 +185,26 @@ public class PubnubChessActivity extends MyBaseActivity {
                             view.setOpponent(opponentName);
                             view.setGameId(gameId);
                             view.startGame(false);
+                            startTimestamp = getTimestamp();
                             pubnubService.publishToPubnubChannel(getTendenciesOpponentObject(gameId, opponentName));
                             setPubnubStatePlaying();
                         }
                         break;
                     case END:
                         if(gameId.equalsIgnoreCase(id) && jsonObject.getString("sendTo").equalsIgnoreCase(myName)){ // get PGN result from pubnub only if I am a winner
+                            endTimestamp = getTimestamp();
                             String pgn = fromJsonToPGN(jsonObject);
                             if(jsonObject.getString("winner") != null){
                                 showResultDialog("Congrats, you win!", pgn);
+                            }else{
+                                showResultDialog("Oh, that's draw!", pgn);
+                            }
+                            isGameCreated = false;
+                        } else if(gameId.equalsIgnoreCase(id) && jsonObject.getString("sendFrom").equalsIgnoreCase(myName)){ // get PGN result from pubnub only if I am a loser
+                            endTimestamp = getTimestamp();
+                            String pgn = fromJsonToPGN(jsonObject);
+                            if(jsonObject.getString("winner") != null){
+                                showResultDialog("Oh, that's mate!", pgn);
                             }else{
                                 showResultDialog("Oh, that's draw!", pgn);
                             }
@@ -242,9 +257,9 @@ public class PubnubChessActivity extends MyBaseActivity {
                         String tendency = getNewTendency(opening);
                         tvTendencies.setText("");
                         tvTendencies.setText(tendency);
-                        showOpeningsDialog("Be careful! Your opponent made powerful opening move: " +  opening + ". He spent " + timeForOpening);
+                        showOpeningsDialog("Be careful! It appears your opponent has opened with the '" +  opening + "' move. He spent " + timeForOpening + " Good luck!");
                     }else if(user.equalsIgnoreCase(myName)){
-                        showOpeningsDialog("Great! You made powerful opening move: " +  opening + ". You spent " + timeForOpening);
+                        showOpeningsDialog("Great! It appears that you have opened with the '" +  opening + "' move. You spent " + timeForOpening + " Good luck!");
                     }
                 }
             }catch (JSONException e){
@@ -261,12 +276,16 @@ public class PubnubChessActivity extends MyBaseActivity {
         }
     }
 
+    private Date getTimestamp(){
+        return new Date();
+    }
+
     private JSONObject getTendenciesOpponentObject(String gameId, String opponentName) throws JSONException {
         JSONObject tendencies = new JSONObject();
         tendencies.put("gameId", gameId);
         tendencies.put("game", "create");
         tendencies.put("opponent", opponentName);
-        return  tendencies;
+        return tendencies;
     }
 
     private boolean setPubnubStatePlaying(){
@@ -303,31 +322,31 @@ public class PubnubChessActivity extends MyBaseActivity {
         boolean isOpeningUsed = false;
         if (opponentTendencies == null) return null;
         JSONArray tendenciesArray = opponentTendencies.optJSONArray("openings");
-        String tendencies = "Player '" + opponentName + "' used next chess openings: ";
+        String tendencies = "Chess notebook for '" + opponentName + "':\nYour opponent, '" + opponentName + "' prefers the following openings:";
         if(tendenciesArray == null) {
-            tendencies += opening + " in 1 game.";
+            tendencies += "\n- " + opening + " (1 game)";
             return tendencies;
         }
         for (int i = 0; i < tendenciesArray.length(); i++) {
             JSONObject tendency = tendenciesArray.getJSONObject(i);
             String openingName = tendency.getString("name");
-            tendencies += openingName + " in ";
+            tendencies += "\n- " + openingName + " (";
             if(openingName.equalsIgnoreCase(opening)){
                 int count = Integer.parseInt(tendency.getString("count"));
                 count++;
-                tendencies += count + " games";
+                tendencies += count + " games)";
                 isOpeningUsed = true;
             } else{
-                tendencies += tendency.getString("count") + " games";
+                int count = Integer.parseInt(tendency.getString("count"));
+                tendencies += count;
+                if(count == 1){
+                    tendencies += " game)";
+                }else{
+                    tendencies += " games)";
+                }
             }
             if(i + 1 == tendenciesArray.length() && !isOpeningUsed){
-                tendencies += ", " + opening + " in ";
-                tendencies += 1 + " game";
-            }
-            if(i + 1 < tendenciesArray.length()){
-                tendencies += " , ";
-            }else{
-                tendencies += ".";
+                tendencies += "\n-" + opening + " (1 game)";
             }
         }
         return tendencies;
@@ -335,16 +354,17 @@ public class PubnubChessActivity extends MyBaseActivity {
 
     private String parseOpponentTendencies(JSONObject jsonObject) throws JSONException {
         JSONArray tendenciesArray = jsonObject.optJSONArray("openings");
-        String tendencies = "Player '" + opponentName + "' used next chess openings: ";
-        if(tendenciesArray == null) return "Player '" + opponentName + "' didn't use any chess opening.";
+        String tendencies = "Chess notebook for '" + opponentName + "':";
+        if(tendenciesArray == null) return tendencies + "\nYour opponent, '" + opponentName + "' didn't use any chess opening.";
+        tendencies += "\nYour opponent, '" + opponentName + "' prefers the following openings:";
         for (int i = 0; i < tendenciesArray.length(); i++) {
             JSONObject tendency = tendenciesArray.getJSONObject(i);
-            tendencies += tendency.getString("name") + " in ";
-            tendencies += tendency.getString("count") + " games";
-            if(i + 1 < tendenciesArray.length()){
-                tendencies += " , ";
+            int count = Integer.parseInt(tendency.getString("count"));
+            tendencies += "\n- " + tendency.getString("name") + " (" + count;
+            if(count == 1){
+                tendencies += " game)";
             }else{
-                tendencies += ".";
+                tendencies += " games)";
             }
         }
         return tendencies;
@@ -352,7 +372,7 @@ public class PubnubChessActivity extends MyBaseActivity {
 
     private void showOpeningsDialog(String openingMove){
         new AlertDialog.Builder(this)
-                .setTitle("Chess opening move!")
+                .setTitle("Opening move detected!")
                 .setMessage(openingMove)
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
@@ -387,14 +407,33 @@ public class PubnubChessActivity extends MyBaseActivity {
                 .show();
     }
 
+    private String getGameDuration(){
+        String duration = "[Duration \"";
+        long delta = endTimestamp.getTime() - startTimestamp.getTime();
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(delta);
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        if(hours > 0) {
+            duration += hours + " hours ";
+            duration += minutes % 60 + " minutes ";
+            duration += seconds % 60 + " seconds";
+        } else if(minutes > 0) {
+            duration += minutes + " minutes ";
+            duration += seconds % 60 + " seconds";
+        } else {
+            duration += seconds + " seconds";
+        }
+        return duration + "\"]\n";
+    }
 
     private String fromJsonToPGN(JSONObject json) throws JSONException {
-        String result = "";
+        String result = "Game summary:\n";
         String[] arrHead = {"Event", "Site", "Date", "Round", "White", "Black", "gameResult", "EventDate", "Variant", "Setup", "FEN", "PlyCount"};
         for (String anArrHead : arrHead) {
             try {
                 if(anArrHead.equalsIgnoreCase("gameResult")){
                     result += "[Result \"" + json.getString(anArrHead) + "\"]\n";
+                    result += getGameDuration();
                 }else{
                     result += "[" + anArrHead + " \"" + json.getString(anArrHead.toLowerCase()) + "\"]\n";
                 }

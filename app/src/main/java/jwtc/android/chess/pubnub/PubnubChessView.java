@@ -249,22 +249,22 @@ public class PubnubChessView extends ChessViewBase {
                     JSONObject pgnMateJson = exportJsonPGN();
                     pgnMateJson.put("winner", opponent);
                     parent.sendJsonToPubnub(pgnMateJson);
-                    new AlertDialog.Builder(parent)
-                            .setTitle("Oh, that's mate!")
-                            .setMessage("Game PGN:")
-                            .setMessage(exportFullPGN())
-                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    // do nothing
-                                }
-                            })
-                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    // do nothing
-                                }
-                            })
-                            .setIcon(android.R.drawable.ic_dialog_alert)
-                            .show();
+//                    new AlertDialog.Builder(parent)
+//                            .setTitle("Oh, that's mate!")
+//                            .setMessage("Game PGN:")
+//                            .setMessage(exportFullPGN())
+//                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    // do nothing
+//                                }
+//                            })
+//                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    // do nothing
+//                                }
+//                            })
+//                            .setIcon(android.R.drawable.ic_dialog_alert)
+//                            .show();
                     break;
                 case ChessBoard.CHECK:
                     tvPlayerBottom.setText(R.string.state_check);
@@ -278,22 +278,22 @@ public class PubnubChessView extends ChessViewBase {
                     JSONObject pgnDrawJson = exportJsonPGN();
                     pgnDrawJson.put("winner", JSONObject.NULL);
                     parent.sendJsonToPubnub(pgnDrawJson);
-                    new AlertDialog.Builder(parent)
-                            .setTitle("Oh, that's draw!")
-                            .setMessage("Game PGN:")
-                            .setMessage(exportFullPGN())
-                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    // do nothing
-                                }
-                            })
-                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    // do nothing
-                                }
-                            })
-                            .setIcon(android.R.drawable.ic_dialog_alert)
-                            .show();
+//                    new AlertDialog.Builder(parent)
+//                            .setTitle("Oh, that's draw!")
+//                            .setMessage("Game PGN:")
+//                            .setMessage(exportFullPGN())
+//                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    // do nothing
+//                                }
+//                            })
+//                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    // do nothing
+//                                }
+//                            })
+//                            .setIcon(android.R.drawable.ic_dialog_alert)
+//                            .show();
                 default:
                     break;
             }
@@ -397,6 +397,7 @@ public class PubnubChessView extends ChessViewBase {
             pgn.put("game", "end");
             pgn.put("gameId", gameId);
             pgn.put("sendTo", opponent);
+            pgn.put("sendFrom", me);
         } catch (JSONException e) {
             Log.d(LOG_TAG, "Can't convert pgn to json: " + e.toString());
         }

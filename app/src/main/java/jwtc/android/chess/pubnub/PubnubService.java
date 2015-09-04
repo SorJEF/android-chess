@@ -245,7 +245,7 @@ public class PubnubService extends Service {
                 try {
                     jsonObject = new JSONObject(message.toString());
                     if (jsonObject.has("action") && jsonObject.getString("action").equalsIgnoreCase("statistics") && jsonObject.getString("user").equalsIgnoreCase(getUUID())) {
-                        String statistics = "Here is your statistic, " + getUUID() + ".\nTotal: " + jsonObject.getInt("total") + ", Win: " + jsonObject.getInt("win") + ", Lose: " + jsonObject.getInt("lose") + ", Draw: " + jsonObject.getInt("draw");
+                        String statistics = "Chess stats for " + getUUID() + ":\nGames played: " + jsonObject.getInt("total") + ", Wins: " + jsonObject.getInt("win") + ", Losses: " + jsonObject.getInt("lose") + ", Draws: " + jsonObject.getInt("draw");
                         Intent intent = new Intent().putExtra(PubnubUserListActivity.SUBSCRIBE_STATISTICS_RESULT, statistics);
                         pendingIntent.send(PubnubService.this, PubnubUserListActivity.SUBSCRIBE_STATISTICS_CODE, intent);
                     } else if (jsonObject.has("acceptor") && jsonObject.getString("acceptor").equalsIgnoreCase(getUUID())) {
